@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import CodeEditor from '../CodeEditor/CodeEditor'
+import LessonEditor from '../CodeEditor/LessonEditor'
 import { getHint } from '../../lib/claude'
 
 export default function LessonStep({
@@ -7,13 +7,15 @@ export default function LessonStep({
   lessonIndex,
   totalLessons,
   completedSteps,
+  initialCode,
+  alreadyCompleted,
   onSubmit,
   isEvaluating,
   feedback,
   onNext,
   onPrev,
 }) {
-  const [code, setCode] = useState('')
+  const [code, setCode] = useState(initialCode || '')
   const [hint, setHint] = useState(null)
   const [loadingHint, setLoadingHint] = useState(false)
 
@@ -40,46 +42,20 @@ export default function LessonStep({
   return (
     // Extra bottom padding so the fixed success/error bar doesn't cover content
     <div className="animate-slide-up pb-28">
-      {/* Code so far — all previous steps stacked */}
-      {completedSteps.length > 0 && (
-        <div className="mb-5 space-y-2">
-          <div className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-2">
-            Code so far
-          </div>
-          {completedSteps.map((step, i) => (
-            <div key={i} className="rounded-xl overflow-hidden border border-emerald-200">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border-b border-emerald-200">
-                <span className="text-emerald-600 text-xs">✓</span>
-                <span className="text-xs font-medium text-emerald-700">{step.title}</span>
-              </div>
-              <CodeEditor value={step.code} readOnly minHeight="0px" />
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Current lesson */}
       <div className="mb-5">
         <h2 className="text-xl font-bold text-stone-800 mb-2">{lesson.title}</h2>
         <p className="text-stone-600 leading-relaxed">{lesson.explanation}</p>
       </div>
 
-      {/* Task */}
-      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4">
-        <div className="flex items-start gap-2">
-          <span className="text-emerald-600 mt-0.5 shrink-0">✏️</span>
-          <div>
-            <div className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1">
-              Your task
-            </div>
-            <p className="text-emerald-900 text-sm">{lesson.task}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Editor */}
+      {/* Editor — previous steps shown grayed out, comment in green, active region below */}
       <div className="mb-4">
-        <CodeEditor value={code} onChange={setCode} minHeight="100px" />
+        <LessonEditor
+          lockedContent={completedSteps.map((s) => s.code).join('\n')}
+          commentLine={`// ${lesson.title}`}
+          value={code}
+          onChange={setCode}
+        />
       </div>
 
       {/* Hint */}
@@ -103,7 +79,7 @@ export default function LessonStep({
           ← Prev
         </button>
 
-        {feedback?.correct ? (
+        {(feedback?.correct || alreadyCompleted) ? (
           <button
             onClick={onNext}
             className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
