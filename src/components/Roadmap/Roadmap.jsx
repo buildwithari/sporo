@@ -1,0 +1,314 @@
+import { useState, useRef } from 'react'
+import { isDue, isOverdue } from '../../lib/srs'
+
+// Colors per milestone
+const MILESTONE_STYLES = {
+  'arrays-hashing':      { bg: 'bg-emerald-500', light: 'bg-emerald-50', border: 'border-emerald-200', ring: 'ring-emerald-300', text: 'text-emerald-700' },
+  'two-pointers':        { bg: 'bg-blue-500',    light: 'bg-blue-50',    border: 'border-blue-200',    ring: 'ring-blue-300',    text: 'text-blue-700' },
+  'sliding-window':      { bg: 'bg-violet-500',  light: 'bg-violet-50',  border: 'border-violet-200',  ring: 'ring-violet-300',  text: 'text-violet-700' },
+  'stack':               { bg: 'bg-orange-500',  light: 'bg-orange-50',  border: 'border-orange-200',  ring: 'ring-orange-300',  text: 'text-orange-700' },
+  'binary-search':       { bg: 'bg-teal-500',    light: 'bg-teal-50',    border: 'border-teal-200',    ring: 'ring-teal-300',    text: 'text-teal-700' },
+  'linked-list':         { bg: 'bg-cyan-500',    light: 'bg-cyan-50',    border: 'border-cyan-200',    ring: 'ring-cyan-300',    text: 'text-cyan-700' },
+  'trees':               { bg: 'bg-lime-500',    light: 'bg-lime-50',    border: 'border-lime-200',    ring: 'ring-lime-300',    text: 'text-lime-700' },
+  'graphs':              { bg: 'bg-rose-500',    light: 'bg-rose-50',    border: 'border-rose-200',    ring: 'ring-rose-300',    text: 'text-rose-700' },
+  'dynamic-programming': { bg: 'bg-purple-500',  light: 'bg-purple-50',  border: 'border-purple-200',  ring: 'ring-purple-300',  text: 'text-purple-700' },
+}
+
+const DEFAULT_STYLE = { bg: 'bg-stone-400', light: 'bg-stone-50', border: 'border-stone-200', ring: 'ring-stone-300', text: 'text-stone-600' }
+
+// Horizontal offsets for the winding path (px from center)
+const WAVE = [0, 70, 110, 70, 0, -70, -110, -70]
+
+function UnitNode({ unit, unitProgress, style, onStart, onRecall, onReset, index, isLocked }) {
+  const status = unitProgress?.status || 'new'
+  const recallDue = isDue(unitProgress?.nextReview)
+  const overdue = isOverdue(unitProgress?.nextReview)
+  const offset = WAVE[index % WAVE.length]
+
+  let nodeClass = ''
+  let icon = null
+
+  if (isLocked) {
+    nodeClass = 'bg-stone-100 border-2 border-stone-200 cursor-not-allowed'
+    icon = <span className="text-xl">🔒</span>
+  } else if (status === 'mastered') {
+    nodeClass = 'bg-amber-400 shadow-lg shadow-amber-200'
+    icon = <span className="text-2xl">⭐</span>
+  } else if (status === 'planted') {
+    nodeClass = `${style.bg} shadow-lg text-white`
+    icon = <span className="text-2xl">✓</span>
+  } else if (status === 'in_progress') {
+    nodeClass = `bg-white border-4 ${style.border} ring-4 ${style.ring} ring-opacity-40 shadow-md`
+    icon = <span className="text-2xl">🌱</span>
+  } else {
+    nodeClass = `bg-white border-2 ${style.border} shadow-sm`
+    icon = (
+      <span className={`text-xs font-bold uppercase tracking-wide ${
+        unit.difficulty === 'Easy' ? 'text-emerald-500' :
+        unit.difficulty === 'Medium' ? 'text-amber-500' : 'text-red-500'
+      }`}>
+        {unit.difficulty?.[0] ?? '?'}
+      </span>
+    )
+  }
+
+  const [confirming, setConfirming] = useState(false)
+
+  function handleClick() {
+    if (isLocked || confirming) return
+    if (recallDue) onRecall(unit)
+    else onStart(unit)
+  }
+
+  function handleReset(e) {
+    e.stopPropagation()
+    setConfirming(true)
+  }
+
+  function confirmReset(e) {
+    e.stopPropagation()
+    onReset(unit)
+    setConfirming(false)
+  }
+
+  function cancelReset(e) {
+    e.stopPropagation()
+    setConfirming(false)
+  }
+
+  const hasProgress = status !== 'new'
+
+  return (
+    <div
+      className={`flex flex-col items-center group ${isLocked ? 'opacity-40' : ''}`}
+      style={{ transform: `translateX(${offset}px)` }}
+    >
+      <div className="relative">
+        <button
+          onClick={handleClick}
+          disabled={isLocked}
+          className={`w-16 h-16 rounded-full flex items-center justify-center transition-transform ${
+            isLocked ? '' : 'hover:scale-110 active:scale-95'
+          } ${nodeClass}`}
+        >
+          {icon}
+        </button>
+
+        {!isLocked && recallDue && (
+          <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs ${overdue ? 'bg-red-500' : 'bg-amber-400'}`}>
+            💧
+          </div>
+        )}
+      </div>
+
+      <div className="mt-2 text-center" style={{ maxWidth: '90px' }}>
+        <p className={`text-xs font-medium leading-tight line-clamp-2 ${isLocked ? 'text-stone-400' : 'text-stone-700'}`}>
+          {unit.name}
+        </p>
+
+        {/* Reset — shown on hover if there's progress */}
+        {!isLocked && hasProgress && (
+          <div className="mt-1 h-4">
+            {confirming ? (
+              <div className="flex items-center justify-center gap-1">
+                <button onClick={confirmReset} className="text-red-500 text-xs font-semibold hover:text-red-700">Yes</button>
+                <span className="text-stone-300 text-xs">·</span>
+                <button onClick={cancelReset} className="text-stone-400 text-xs hover:text-stone-600">No</button>
+              </div>
+            ) : (
+              <button
+                onClick={handleReset}
+                className="text-stone-300 hover:text-stone-500 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                ↺ reset
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function Connector({ fromOffset, toOffset }) {
+  // A short dashed vertical line, shifted to stay visually between the two nodes
+  const midOffset = (fromOffset + toOffset) / 2
+  return (
+    <div
+      className="flex justify-center my-1"
+      style={{ transform: `translateX(${midOffset}px)` }}
+    >
+      <div className="w-0.5 h-8 border-l-2 border-dashed border-stone-200" />
+    </div>
+  )
+}
+
+function MilestoneSection({ milestone, progress, onStartUnit, onStartRecall, onMilestoneClick, onResetUnit, onResetMilestone }) {
+  const [open, setOpen] = useState(milestone.unlocked && milestone.id === 'arrays-hashing')
+  const [confirmingMilestoneReset, setConfirmingMilestoneReset] = useState(false)
+  const style = MILESTONE_STYLES[milestone.id] ?? DEFAULT_STYLE
+  const units = milestone.units || []
+
+  const completedCount = units.filter((u) => {
+    const s = progress.units?.[u.id]?.status
+    return s === 'planted' || s === 'mastered'
+  }).length
+
+  // The frontier is the first unit that isn't completed yet.
+  // Units after the frontier are locked; completed units before it stay accessible.
+  const frontierIdx = units.findIndex((u) => {
+    const s = progress.units?.[u.id]?.status
+    return !s || s === 'new' || s === 'in_progress'
+  })
+  // If all units are completed, nothing is locked
+  const effectiveFrontier = frontierIdx === -1 ? units.length : frontierIdx
+
+  return (
+    <div className="mb-8">
+      {/* Chapter banner */}
+      <div className={`rounded-2xl mb-6 ${milestone.unlocked ? style.bg : 'bg-stone-200'} relative overflow-hidden`}>
+        {!milestone.unlocked && (
+          <div className="absolute inset-0 bg-stone-100/60 flex items-center justify-center rounded-2xl">
+            <div className="flex items-center gap-2 bg-white/90 px-4 py-2 rounded-full shadow-sm">
+              <span className="text-lg">🔒</span>
+              <span className="text-stone-600 font-semibold text-sm">Locked</span>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 p-5">
+          {/* Left: click to open concept page */}
+          <button
+            onClick={() => milestone.unlocked && onMilestoneClick(milestone)}
+            disabled={!milestone.unlocked}
+            className="flex items-center gap-3 flex-1 text-left group"
+          >
+            <span className="text-3xl">{milestone.emoji}</span>
+            <div>
+              <h2 className="font-bold text-white text-lg leading-tight group-hover:underline decoration-white/60">
+                {milestone.name}
+              </h2>
+              {milestone.unlocked && (
+                <p className="text-white/70 text-sm">{completedCount} / {units.length} planted</p>
+              )}
+            </div>
+          </button>
+
+          {/* Right: reset chapter + expand/collapse */}
+          {milestone.unlocked && (
+            <div className="flex items-center gap-1">
+              {completedCount > 0 && (
+                confirmingMilestoneReset ? (
+                  <div className="flex items-center gap-1.5 bg-white/20 rounded-lg px-2 py-1">
+                    <span className="text-white text-xs">Reset chapter?</span>
+                    <button
+                      onClick={() => { onResetMilestone(milestone); setConfirmingMilestoneReset(false) }}
+                      className="text-white font-bold text-xs hover:text-red-200"
+                    >Yes</button>
+                    <span className="text-white/50 text-xs">·</span>
+                    <button
+                      onClick={() => setConfirmingMilestoneReset(false)}
+                      className="text-white/70 text-xs hover:text-white"
+                    >No</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmingMilestoneReset(true)}
+                    className="text-white/50 hover:text-white/90 transition-colors text-xs px-2 py-1 rounded-lg hover:bg-white/10"
+                    title="Reset chapter progress"
+                  >↺</button>
+                )
+              )}
+              <button
+                onClick={() => setOpen((o) => !o)}
+                className="text-white/80 hover:text-white transition-colors p-1"
+                aria-label={open ? 'Collapse' : 'Expand'}
+              >
+                {open ? '▲' : '▼'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {milestone.unlocked && units.length > 0 && (
+          <div className="mx-5 mb-5 h-1.5 bg-white/30 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-white/80 rounded-full transition-all"
+              style={{ width: `${(completedCount / units.length) * 100}%` }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Unit nodes — winding path */}
+      {milestone.unlocked && open && (
+        <div className="flex flex-col items-center">
+          {units.map((unit, i) => (
+            <div key={unit.id} className="flex flex-col items-center w-full">
+              {i > 0 && (
+                <Connector
+                  fromOffset={WAVE[(i - 1) % WAVE.length]}
+                  toOffset={WAVE[i % WAVE.length]}
+                />
+              )}
+              <UnitNode
+                unit={unit}
+                unitProgress={progress.units?.[unit.id]}
+                style={style}
+                onStart={(u) => onStartUnit(u, milestone)}
+                onRecall={(u) => onStartRecall(u, milestone)}
+                onReset={(u) => onResetUnit(u)}
+                index={i}
+                isLocked={i > effectiveFrontier}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function Roadmap({ milestones, progress, onStartUnit, onStartRecall, onMilestoneClick, onResetUnit, onResetMilestone }) {
+  const totalPlanted = Object.values(progress.units || {}).filter(
+    (u) => u.status === 'planted' || u.status === 'mastered'
+  ).length
+
+  const dueToday = Object.entries(progress.units || {}).filter(
+    ([, u]) => (u.status === 'planted' || u.status === 'mastered') && isDue(u.nextReview)
+  ).length
+
+  return (
+    <div className="animate-fade-in">
+      {/* Hero header */}
+      <div className="text-center mb-10">
+        <div className="text-5xl mb-3">🌿</div>
+        <h1 className="text-2xl font-bold text-stone-800 mb-1">Your DSA Garden</h1>
+        {totalPlanted > 0 ? (
+          <p className="text-stone-400 text-sm">
+            {totalPlanted} problem{totalPlanted !== 1 ? 's' : ''} planted
+            {dueToday > 0 && (
+              <span className="text-amber-500 font-medium"> · {dueToday} to water 💧</span>
+            )}
+          </p>
+        ) : (
+          <p className="text-stone-400 text-sm">Tap a problem to start planting</p>
+        )}
+      </div>
+
+      {/* Milestones */}
+      {milestones.map((ms) => (
+        <MilestoneSection
+          key={ms.id}
+          milestone={ms}
+          progress={progress}
+          onStartUnit={onStartUnit}
+          onStartRecall={onStartRecall}
+          onMilestoneClick={onMilestoneClick}
+          onResetUnit={onResetUnit}
+          onResetMilestone={onResetMilestone}
+        />
+      ))}
+    </div>
+  )
+}
