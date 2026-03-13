@@ -16,7 +16,7 @@ Most DSA apps throw you at a problem and wait. Sporo does the opposite — it wa
 **Units** are problems (Two Sum, Valid Anagram...)
 **Lessons** are the micro-steps inside each problem — one logical idea, 1-2 lines of code, completable in ~5 minutes
 
-Claude breaks each problem into lessons the first time you open a unit. You never have to figure out where to begin. You just write the next line.
+Claude breaks each problem into lessons the first time you open a unit in your chosen language. You never have to figure out where to begin. You just write the next line.
 
 ---
 
@@ -98,7 +98,7 @@ Following the **Neetcode 150** curriculum, structured as a garden path:
 | Code Editor | CodeMirror (`@uiw/react-codemirror`) |
 | AI Lessons | Anthropic Claude API (`claude-sonnet-4-6`) |
 | Storage | localStorage (no backend) |
-| Language | Java |
+| Languages | Java, Python, C++, C, JavaScript (picker in nav) |
 
 ---
 
@@ -154,8 +154,9 @@ sporo/
 │   ├── lib/
 │   │   ├── srs.js            # Spaced repetition (SM-2 inspired)
 │   │   ├── claude.js         # Lesson generation, code eval, chat
-│   │   ├── lessonCache.js    # Separate localStorage cache for lessons
-│   │   └── progress.js       # XP, streaks, unit state, forest
+│   │   ├── languages.js      # Language config + CodeMirror extension map
+│   │   ├── lessonCache.js    # Per-language lesson cache (localStorage)
+│   │   └── progress.js       # XP, streaks, unit state, forest, language pref
 │   └── App.jsx
 ├── .env
 ├── package.json

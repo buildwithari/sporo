@@ -43,12 +43,23 @@ function parseJSON(text) {
   }
 }
 
+/** Returns the display name for a language ID. */
+function langLabel(language) {
+  const labels = { java: 'Java', python: 'Python', cpp: 'C++', c: 'C', javascript: 'JavaScript' }
+  return labels[language] || language
+}
+
 /**
  * Generate a two-part lesson plan: brute force first, then step-by-step optimization.
  * Returns { brute: { intro, lessons[] }, optimal: { intro, lessons[] } }
  */
-export async function generateLessons(unit) {
-  const system = `You are a DSA tutor. Generate a two-part lesson plan for a Java coding problem.
+export async function generateLessons(unit, language = 'java') {
+  const lang = langLabel(language)
+  const starterCode = typeof unit.starterCode === 'object'
+    ? unit.starterCode[language] || unit.starterCode.java
+    : unit.starterCode
+
+  const system = `You are a DSA tutor. Generate a two-part lesson plan for a ${lang} coding problem.
 Return ONLY a JSON object — no markdown, no extra text.
 
 Part 1 ("brute"): teach the simplest correct approach, step by step.
@@ -63,7 +74,7 @@ Return exactly this shape:
         "id": number,
         "title": string,       // 4-6 words, e.g. "Loop over every pair"
         "explanation": string, // 1-2 sentences explaining the concept
-        "task": string         // exactly what Java to write — be specific, 1-2 lines
+        "task": string         // exactly what ${lang} to write — be specific, 1-2 lines
       }
     ]
   },
@@ -82,9 +93,9 @@ Return exactly this shape:
 
   const user = `Problem: ${unit.name}
 Description: ${unit.description}
-Language: Java
+Language: ${lang}
 Starter code:
-${unit.starterCode}`
+${starterCode}`
 
   const text = await callClaude(system, user, 3000)
   return parseJSON(text)
@@ -94,8 +105,9 @@ ${unit.starterCode}`
  * Evaluate a student's code for a single brute-force micro-lesson (code fragment).
  * Returns { correct: boolean, feedback: string, hint?: string }
  */
-export async function evaluateCode(lesson, userCode) {
-  const system = `You are an encouraging Java coding tutor. Evaluate if the student's code correctly implements what the lesson asks.
+export async function evaluateCode(lesson, userCode, language = 'java') {
+  const lang = langLabel(language)
+  const system = `You are an encouraging ${lang} coding tutor. Evaluate if the student's code correctly implements what the lesson asks.
 Be brief and kind. Focus on whether the concept is right, not style.
 Return ONLY valid JSON — no markdown:
 {
@@ -114,40 +126,12 @@ ${userCode}`
 }
 
 /**
- * Evaluate a single optimization step.
- * ONLY checks whether the one described change is present — ignores everything else.
- * Returns { correct: boolean, feedback: string, hint?: string }
- */
-export async function evaluateOptStep(lesson, userCode) {
-  const system = `You are checking whether a student made one specific code change.
-Your ONLY job: look for the change described in the task. Nothing else.
-Do NOT evaluate overall correctness, optimality, or any other part of the code.
-If the specific change is present → correct: true, even if the rest of the code still looks like brute-force.
-If the specific change is missing or wrong → correct: false with a targeted hint about that change only.
-Return ONLY valid JSON — no markdown:
-{
-  "correct": boolean,
-  "feedback": string,   // 1-2 sentences about the specific change only
-  "hint": string        // only if incorrect — a nudge about the one missing change
-}`
-
-  const user = `The one change to find: ${lesson.task}
-
-Student's code:
-${userCode}
-
-Is this specific change present in the code? Judge on that alone.`
-
-  const text = await callClaude(system, user, 256)
-  return parseJSON(text)
-}
-
-/**
  * Evaluate the student's brute-force solution (lenient on time/space complexity).
  * Returns { correct, feedback, timeComplexity, spaceComplexity, hint? }
  */
-export async function evaluateBruteSolution(unit, userCode) {
-  const system = `You are a Java DSA evaluator checking a brute-force solution.
+export async function evaluateBruteSolution(unit, userCode, language = 'java') {
+  const lang = langLabel(language)
+  const system = `You are a ${lang} DSA evaluator checking a brute-force solution.
 Accept any approach that produces correct output — O(n²) or worse is fine, extra space is fine.
 Do NOT penalize for time or space complexity. Only check correctness of logic.
 Return ONLY valid JSON — no markdown:
@@ -171,11 +155,12 @@ ${userCode}`
 }
 
 /**
- * Evaluate the student's full Java solution.
+ * Evaluate the student's full solution.
  * Returns { correct, feedback, timeComplexity, spaceComplexity, hint? }
  */
-export async function evaluateFullSolution(unit, userCode) {
-  const system = `You are a Java DSA evaluator. Check if the student's solution correctly solves the problem.
+export async function evaluateFullSolution(unit, userCode, language = 'java') {
+  const lang = langLabel(language)
+  const system = `You are a ${lang} DSA evaluator. Check if the student's solution correctly solves the problem.
 Reason about correctness based on algorithm logic and test cases — do not run the code.
 Return ONLY valid JSON — no markdown:
 {
@@ -216,7 +201,7 @@ export async function askAssistant(milestoneName, conversationHistory) {
       model: 'claude-sonnet-4-6',
       max_tokens: 512,
       system: `You are a friendly DSA tutor specializing in ${milestoneName}.
-Answer questions clearly and concisely. Use plain language. Give short Java examples when it helps.
+Answer questions clearly and concisely. Use plain language. Give short code examples when it helps.
 Keep responses to 3-5 sentences unless a longer explanation is truly necessary.`,
       messages: conversationHistory,
     }),
@@ -230,12 +215,14 @@ Keep responses to 3-5 sentences unless a longer explanation is truly necessary.`
 /**
  * Get a hint for a stuck student.
  */
-export async function getHint(lesson, userCode) {
+export async function getHint(lesson, userCode, language = 'java') {
+  const lang = langLabel(language)
   const system = `You are a patient DSA tutor. Give a short, specific hint — don't give away the answer.
 Return plain text, 1-2 sentences max.`
 
   const user = `Lesson: "${lesson.title}"
 Task: ${lesson.task}
+Language: ${lang}
 Student's current code:
 ${userCode || '(nothing written yet)'}
 Give them a nudge.`

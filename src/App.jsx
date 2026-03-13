@@ -4,9 +4,10 @@ import DailyPlan from './components/DailyPlan/DailyPlan'
 import LessonFlow from './components/LessonStep/LessonFlow'
 import MilestonePage from './components/Milestone/MilestonePage'
 import Celebration from './components/Celebration/Celebration'
-import { loadProgress, resetUnitProgress, resetMilestoneProgress, resetAllProgress } from './lib/progress'
+import { loadProgress, resetUnitProgress, resetMilestoneProgress, resetAllProgress, setLanguage } from './lib/progress'
 import ForestPage from './components/Forest/ForestPage'
 import { clearAllLessonCaches } from './lib/lessonCache'
+import { LANGUAGES, DEFAULT_LANGUAGE } from './lib/languages'
 import { milestones } from './data/neetcode150'
 import DailyTaskWidget from './components/DailyTask/DailyTaskWidget'
 
@@ -26,10 +27,16 @@ export default function App() {
   const [isRecall, setIsRecall] = useState(false)
   const [celebration, setCelebration] = useState(null)
   const [progress, setProgress] = useState(() => loadProgress())
+  const [language, setLanguageState] = useState(() => loadProgress().user?.language || DEFAULT_LANGUAGE)
 
   const refreshProgress = useCallback(() => {
     setProgress(loadProgress())
   }, [])
+
+  function handleLanguageChange(lang) {
+    setLanguage(lang)
+    setLanguageState(lang)
+  }
 
   function handleMilestoneClick(milestone) {
     setSelectedMilestone(milestone)
@@ -88,9 +95,8 @@ export default function App() {
   }
 
   function handleResetAll() {
-    const allUnitIds = milestones.flatMap((ms) => (ms.units || []).map((u) => u.id))
     resetAllProgress()
-    clearAllLessonCaches(allUnitIds)
+    clearAllLessonCaches()
     refreshProgress()
     setShowResetMenu(false)
   }
@@ -147,6 +153,17 @@ export default function App() {
               <span className="font-bold">{totalXP}</span>
               <span className="ml-0.5">🌲</span>
             </button>
+
+            {/* Language picker */}
+            <select
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="text-sm font-medium px-2 py-1.5 rounded-lg bg-stone-100 text-stone-700 border-none cursor-pointer hover:bg-stone-200 transition-colors"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.id} value={l.id}>{l.label}</option>
+              ))}
+            </select>
 
             {/* Global reset menu */}
             <div className="relative" ref={resetMenuRef}>
@@ -207,6 +224,7 @@ export default function App() {
             unit={selectedUnit}
             milestone={selectedMilestone}
             isRecall={isRecall}
+            language={language}
             onComplete={handleLessonComplete}
             onBack={() => setView('roadmap')}
             onProgressUpdate={refreshProgress}

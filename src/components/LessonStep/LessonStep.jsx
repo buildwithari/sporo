@@ -36,6 +36,7 @@ export default function LessonStep({
   onPrev,
   contextCode,    // optional: function signature shown as read-only reference above the editor
   referenceCode,  // optional: brute force solution shown as a collapsible reference panel
+  language,       // language ID for editor syntax + comment prefix
 }) {
   const [code, setCode] = useState(initialCode || '')
   const [hint, setHint] = useState(null)
@@ -51,7 +52,7 @@ export default function LessonStep({
   const handleGetHint = async () => {
     setLoadingHint(true)
     try {
-      const h = await getHint(lesson, code)
+      const h = await getHint(lesson, code, language)
       setHint(h)
     } catch {
       setHint('Think about what data structure gives you O(1) lookups.')
@@ -87,9 +88,10 @@ export default function LessonStep({
       <div className="mb-4">
         <LessonEditor
           lockedContent={completedSteps.map((s) => s.code).join('\n')}
-          commentLine={`// ${lesson.title}`}
+          commentLine={lesson.title}
           value={code}
           onChange={setCode}
+          language={language}
         />
       </div>
 

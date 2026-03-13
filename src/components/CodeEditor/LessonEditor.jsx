@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
-import { java } from '@codemirror/lang-java'
 import { vscodeDark } from '@uiw/codemirror-theme-vscode'
+import { getLangExtension, getCommentPrefix } from '../../lib/languages'
 import { EditorState, StateField } from '@codemirror/state'
 import { EditorView, Decoration } from '@codemirror/view'
 
@@ -63,9 +63,10 @@ function buildExtensions(lockedLen, commentLen) {
  *   value          — the user's current (editable) code
  *   onChange       — called with only the editable portion
  */
-export default function LessonEditor({ lockedContent, commentLine, value, onChange }) {
+export default function LessonEditor({ lockedContent, commentLine, value, onChange, language = 'java' }) {
+  const commentChar = getCommentPrefix(language)
   const prefix = lockedContent ? lockedContent + '\n' : ''
-  const comment = commentLine ? commentLine + '\n' : ''
+  const comment = commentLine ? `${commentChar} ${commentLine}\n` : ''
   const lockedLen = prefix.length
   const commentLen = comment.length
   const lockedEndPos = lockedLen + commentLen
@@ -98,7 +99,7 @@ export default function LessonEditor({ lockedContent, commentLine, value, onChan
         height="auto"
         minHeight="140px"
         theme={vscodeDark}
-        extensions={[java(), ...extensions, decoTheme]}
+        extensions={[getLangExtension(language), ...extensions, decoTheme]}
         onChange={handleChange}
         onCreateEditor={handleCreateEditor}
         basicSetup={{

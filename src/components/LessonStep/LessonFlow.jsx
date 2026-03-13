@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import LessonStep from './LessonStep'
 import CodeEditor from '../CodeEditor/CodeEditor'
 import {
@@ -26,6 +26,7 @@ const XP_VALUES = {
 export default function LessonFlow({
   unit,
   isRecall,
+  language,
   onComplete,
   onBack,
   onProgressUpdate,
@@ -40,7 +41,11 @@ export default function LessonFlow({
   const [bfLessonIdx, setBfLessonIdx] = useState(0)
   const [bfCompletedSteps, setBfCompletedSteps] = useState([]) // { title, code }[]
   const [bfFeedback, setBfFeedback] = useState(null)
-  const [bfFinalCode, setBfFinalCode] = useState(unit.starterCode || '')
+  const starterCode = typeof unit.starterCode === 'object'
+    ? (unit.starterCode[language] || unit.starterCode.java || '')
+    : (unit.starterCode || '')
+
+  const [bfFinalCode, setBfFinalCode] = useState(starterCode)
   const [bfFinalFeedback, setBfFinalFeedback] = useState(null)
 
   // ── Optimal lesson state ─────────────────────────────────────
@@ -48,7 +53,7 @@ export default function LessonFlow({
   const [optCompletedSteps, setOptCompletedSteps] = useState([]) // { title, code }[]
   const [optFeedback, setOptFeedback] = useState(null)
   // recall mode: seeds with starter code so user sees the function signature
-  const [optFinalCode, setOptFinalCode] = useState(unit.starterCode || '')
+  const [optFinalCode, setOptFinalCode] = useState(starterCode)
   const [optFinalFeedback, setOptFinalFeedback] = useState(null)
 
   const [errorMsg, setErrorMsg] = useState(null)
@@ -62,7 +67,7 @@ export default function LessonFlow({
       return
     }
 
-    const cached = getCachedLessons(unit.id)
+    const cached = getCachedLessons(unit.id, language)
     // Only use cache if it has the new two-part shape; otherwise regenerate
     if (cached?.brute?.lessons && cached?.optimal?.lessons) {
       setLessons(cached)
@@ -89,7 +94,7 @@ export default function LessonFlow({
       }
     } else {
       // Clear stale old-format cache before regenerating
-      if (cached) clearCachedLessons(unit.id)
+      if (cached) clearCachedLessons(unit.id, language)
       loadLessons()
     }
   }, [])
@@ -97,8 +102,8 @@ export default function LessonFlow({
   async function loadLessons() {
     setPhase('loading')
     try {
-      const generated = await generateLessons(unit)
-      setCachedLessons(unit.id, generated)
+      const generated = await generateLessons(unit, language)
+      setCachedLessons(unit.id, language, generated)
       setLessons(generated)
       updateUnitProgress(unit.id, {
         status: 'in_progress',
@@ -122,7 +127,7 @@ export default function LessonFlow({
   async function handleBfLessonSubmit(code) {
     setPhase('bf-evaluating')
     try {
-      const result = await evaluateCode(lessons.brute.lessons[bfLessonIdx], code)
+      const result = await evaluateCode(lessons.brute.lessons[bfLessonIdx], code, language)
       setBfFeedback(result)
       if (result.correct) {
         addXP(XP_VALUES.LESSON)
@@ -166,7 +171,7 @@ export default function LessonFlow({
   async function handleBfFinalSubmit() {
     setPhase('bf-finalEvaluating')
     try {
-      const result = await evaluateBruteSolution(unit, bfFinalCode)
+      const result = await evaluateBruteSolution(unit, bfFinalCode, language)
       setBfFinalFeedback(result)
       if (result.correct) {
         addXP(XP_VALUES.BF_SOLVE)
@@ -195,7 +200,7 @@ export default function LessonFlow({
   async function handleOptLessonSubmit(code) {
     setPhase('opt-evaluating')
     try {
-      const result = await evaluateCode(lessons.optimal.lessons[optLessonIdx], code)
+      const result = await evaluateCode(lessons.optimal.lessons[optLessonIdx], code, language)
       setOptFeedback(result)
       if (result.correct) {
         addXP(XP_VALUES.LESSON)
@@ -219,7 +224,7 @@ export default function LessonFlow({
     setOptFeedback(null)
     const next = optLessonIdx + 1
     if (next >= lessons.optimal.lessons.length) {
-      setOptFinalCode(unit.starterCode || '')
+      setOptFinalCode(starterCode)
       setPhase('opt-final')
     } else {
       setOptLessonIdx(next)
@@ -258,10 +263,10 @@ export default function LessonFlow({
     setUsedHints((n) => n + 1)
     setStuck(true)
     const saved = getUnitProgress(unit.id)
-    const seedCode = saved.bfSolvedCode || unit.starterCode || ''
+    const seedCode = saved.bfSolvedCode || starterCode
     setBfFinalCode(seedCode)
 
-    const cached = getCachedLessons(unit.id)
+    const cached = getCachedLessons(unit.id, language)
     if (cached?.brute?.lessons && cached?.optimal?.lessons) {
       setLessons(cached)
       setOptLessonIdx(0)
@@ -276,7 +281,7 @@ export default function LessonFlow({
   async function handleOptFinalSubmit() {
     setPhase('opt-finalEvaluating')
     try {
-      const result = await evaluateFullSolution(unit, optFinalCode)
+      const result = await evaluateFullSolution(unit, optFinalCode, language)
       setOptFinalFeedback(result)
       if (result.correct) {
         const saved = getUnitProgress(unit.id)
@@ -463,7 +468,8 @@ export default function LessonFlow({
           feedback={bfFeedback}
           onNext={handleBfNextLesson}
           onPrev={handleBfStepBack}
-          contextCode={unit.starterCode}
+          contextCode={starterCode}
+          language={language}
         />
       )}
 
@@ -503,7 +509,8 @@ export default function LessonFlow({
           onNext={handleOptNextLesson}
           onPrev={handleOptStepBack}
           referenceCode={bfFinalCode}
-          contextCode={unit.starterCode}
+          contextCode={starterCode}
+          language={language}
         />
       )}
 
@@ -580,7 +587,7 @@ export default function LessonFlow({
             {/* Right: editor + submit */}
             <div className="w-1/2 flex flex-col overflow-hidden bg-stone-50">
               <div className="flex-1 overflow-auto p-4">
-                <CodeEditor value={bfFinalCode} onChange={setBfFinalCode} minHeight="100%" />
+                <CodeEditor value={bfFinalCode} onChange={setBfFinalCode} minHeight="100%" language={language} />
               </div>
 
               {bfFinalFeedback && (
@@ -713,7 +720,7 @@ export default function LessonFlow({
             {/* Right: editor + submit */}
             <div className="w-1/2 flex flex-col overflow-hidden bg-stone-50">
               <div className="flex-1 overflow-auto p-4">
-                <CodeEditor value={optFinalCode} onChange={setOptFinalCode} minHeight="100%" />
+                <CodeEditor value={optFinalCode} onChange={setOptFinalCode} minHeight="100%" language={language} />
               </div>
 
               {optFinalFeedback && (

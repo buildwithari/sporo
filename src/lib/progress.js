@@ -21,6 +21,7 @@ const defaultProgress = () => ({
     totalXP: 0,
     streak: 0,
     lastActive: null,
+    language: 'java',
   },
 })
 
@@ -75,6 +76,12 @@ export function addXP(amount) {
 
 export function getUserStats() {
   return loadProgress().user
+}
+
+export function setLanguage(language) {
+  const p = loadProgress()
+  p.user.language = language
+  saveProgress(p)
 }
 
 /** Reset a single unit's progress (keeps lesson cache). */
