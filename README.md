@@ -23,36 +23,52 @@ Claude breaks each problem into lessons the first time you open a unit. You neve
 ## 🌸 How It Works
 
 ### Learning a new problem
-1. Open a unit — Claude generates 5-6 micro-lessons (cached after first load)
-2. Step 1: a plain-English summary of what you're building
+Each problem is split into two parts:
+
+**Part 1 — Brute Force 🔨**
+1. Open a unit — Claude generates 3-4 micro-lessons for the brute-force approach (cached after first load)
+2. An intro card explains the strategy in plain English before any coding
 3. Each lesson: one concept, one tiny coding task, instant AI feedback
-4. Each correct step → XP + auto-advance animation
-5. Final step: the real LeetCode problem statement + full editor to put it all together
-6. Pass all test cases → the seed is **planted** 🌱
+4. Function signature shown as a read-only reference — you only write the logic
+5. Each correct step → XP + auto-advance animation
+6. Final step: full-screen editor to put the brute force together
+7. Pass → the seed is **planted** 🌱, advance to Part 2
+
+**Part 2 — Optimize 🚀**
+1. Another 3-4 micro-lessons, each teaching one small change that improves the solution
+2. Your accepted brute-force is shown as a collapsible reference panel while you write fresh optimal code
+3. Final step: full-screen editor for the complete optimal solution
+4. Pass → XP awarded, problem fully **planted** 🌱
 
 ### Spaced Repetition (watering schedule)
 Once a problem is solved, it gets scheduled for review. When recall day comes:
 - **Solve it cold** → passes → interval grows (1 → 3 → 7 → 14 → 30 → 60 days) 🌿
-- **Get stuck** → drop back into lessons → re-learn the piece you forgot 🪴
+- **Get stuck** → hit "I'm stuck" → drops back into the optimization lessons → re-learn the piece you forgot 🪴
 - **Overdue recalls** appear in red on the roadmap and get prioritized in your daily plan
 
 ### Concept Pages
 Click any milestone banner to open its concept guide — a pre-written article explaining the topic from first principles. An AI assistant sidebar is always available to answer follow-up questions.
 
-### Daily Garden Plan
-Tell the app how much time you have (15 / 30 / 45 / 60 min). It builds your to-do list:
+### Daily Task Widget
+A persistent widget in the top-right corner of the home screen shows your top 3 tasks for the day — no setup needed:
 
 ```
-🔁 Recall — Contains Duplicate  (overdue — water now!)
-🔁 Recall — Two Sum             (due today)
-🌱 Continue — Valid Anagram     (step 3 of 6)
-⭐ New     — Group Anagrams     (when you're ready)
+🔁 Contains Duplicate  (overdue)
+🔁 Two Sum             (due today)
+🌱 Valid Anagram       (new)
 ```
+
+- Click any task to jump straight into it
+- Completed tasks get a strikethrough in place
+- More than 3 tasks? A **Done** tab holds the completed ones while fresh tasks slide in
+
+### Daily Garden Plan
+Tell the app how much time you have (15 / 30 / 45 / 60 min). It builds a fuller to-do list with time estimates.
 
 Open the app. Follow the list. Close it. Done.
 
 ### Forest & Shop
-Spend your XP on plants — 19 plants across 4 rarities (Common → Legendary). Every plant you buy lives in your personal forest. It's pointless and motivating at the same time.
+Spend your XP on plants — 19 plants across 4 rarities (Common → Legendary). Every plant you buy lives in your personal forest.
 
 ---
 
@@ -109,7 +125,8 @@ Open `http://localhost:5173` and start planting.
 | Action | XP |
 |---|---|
 | Complete a micro-lesson step | +10 |
-| Solve a full problem (first time) | +50 |
+| Solve brute force (first time) | +20 |
+| Solve optimal solution (first time) | +50 |
 | Successful recall (no hints) | +30 |
 | Successful recall (with hints) | +15 |
 
@@ -124,9 +141,10 @@ sporo/
 ├── src/
 │   ├── components/
 │   │   ├── Roadmap/          # Duolingo-style winding path home screen
-│   │   ├── LessonStep/       # Lesson flow + individual step cards
+│   │   ├── LessonStep/       # Two-part lesson flow + individual step cards
 │   │   ├── Milestone/        # Concept article page + AI chat sidebar
 │   │   ├── DailyPlan/        # Time-budgeted study plan
+│   │   ├── DailyTask/        # Fixed top-right daily task widget
 │   │   ├── Forest/           # Plant shop + forest display
 │   │   └── Celebration/      # XP overlay on lesson complete
 │   ├── data/
@@ -145,5 +163,3 @@ sporo/
 ```
 
 ---
-
-*Built for one person. Just to get hired. Then never touch a LeetCode problem again.*
