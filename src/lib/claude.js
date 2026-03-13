@@ -30,28 +30,55 @@ async function callClaude(system, userMessage, maxTokens = 1024) {
 }
 
 function parseJSON(text) {
-  const stripped = text.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim()
-  return JSON.parse(stripped)
+  // Strip markdown fences (Claude sometimes wraps despite being asked not to)
+  let stripped = text.replace(/^```(?:json)?\n?/m, '').replace(/\n?```$/m, '').trim()
+  try {
+    return JSON.parse(stripped)
+  } catch {
+    // Fallback: extract the first {...} or [...] block from the text
+    const match = stripped.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
+    if (match) return JSON.parse(match[1])
+    console.error('parseJSON failed. Raw response:', text)
+    throw new Error('JSON_PARSE_FAILED')
+  }
 }
 
 /**
- * Generate a plain-English intro + 5 micro-lessons for a problem.
- * Returns { intro: { summary, example }, lessons: [...] }
+ * Generate a two-part lesson plan: brute force first, then step-by-step optimization.
+ * Returns { brute: { intro, lessons[] }, optimal: { intro, lessons[] } }
  */
 export async function generateLessons(unit) {
-  const system = `You are a DSA tutor who teaches one tiny concept at a time.
-Generate exactly 5 micro-lessons for the given Java problem.
-Return ONLY a JSON array — no markdown, no extra text.
+  const system = `You are a DSA tutor. Generate a two-part lesson plan for a Java coding problem.
+Return ONLY a JSON object — no markdown, no extra text.
 
-Each lesson object:
+Part 1 ("brute"): teach the simplest correct approach, step by step.
+Part 2 ("optimal"): teach how to evolve that brute-force into the efficient solution, one small change at a time.
+
+Return exactly this shape:
 {
-  "id": number,           // 1-5
-  "title": string,        // 4-6 words, e.g. "Create a HashSet"
-  "explanation": string,  // 1-2 plain English sentences on the concept
-  "task": string          // exactly what to write — be specific, 1-2 lines of Java
-}
-
-Lesson 5 must always be titled "Put it all together" — write the complete solution.`
+  "brute": {
+    "intro": string,      // 2-3 plain-English sentences describing the brute-force idea and why it works
+    "lessons": [          // exactly 3-4 lessons
+      {
+        "id": number,
+        "title": string,       // 4-6 words, e.g. "Loop over every pair"
+        "explanation": string, // 1-2 sentences explaining the concept
+        "task": string         // exactly what Java to write — be specific, 1-2 lines
+      }
+    ]
+  },
+  "optimal": {
+    "intro": string,      // 2-3 sentences: the key insight that unlocks the faster solution and what changes
+    "lessons": [          // exactly 3-4 lessons — each one a focused edit to the brute-force code
+      {
+        "id": number,
+        "title": string,
+        "explanation": string,
+        "task": string    // describe modifying or replacing a specific part of the brute-force — be precise
+      }
+    ]
+  }
+}`
 
   const user = `Problem: ${unit.name}
 Description: ${unit.description}
@@ -59,12 +86,12 @@ Language: Java
 Starter code:
 ${unit.starterCode}`
 
-  const text = await callClaude(system, user, 2048)
+  const text = await callClaude(system, user, 3000)
   return parseJSON(text)
 }
 
 /**
- * Evaluate a student's code for a single micro-lesson.
+ * Evaluate a student's code for a single brute-force micro-lesson (code fragment).
  * Returns { correct: boolean, feedback: string, hint?: string }
  */
 export async function evaluateCode(lesson, userCode) {
@@ -80,6 +107,63 @@ Return ONLY valid JSON — no markdown:
   const user = `Lesson: "${lesson.title}"
 Task: ${lesson.task}
 Student's code:
+${userCode}`
+
+  const text = await callClaude(system, user, 512)
+  return parseJSON(text)
+}
+
+/**
+ * Evaluate a single optimization step.
+ * ONLY checks whether the one described change is present — ignores everything else.
+ * Returns { correct: boolean, feedback: string, hint?: string }
+ */
+export async function evaluateOptStep(lesson, userCode) {
+  const system = `You are checking whether a student made one specific code change.
+Your ONLY job: look for the change described in the task. Nothing else.
+Do NOT evaluate overall correctness, optimality, or any other part of the code.
+If the specific change is present → correct: true, even if the rest of the code still looks like brute-force.
+If the specific change is missing or wrong → correct: false with a targeted hint about that change only.
+Return ONLY valid JSON — no markdown:
+{
+  "correct": boolean,
+  "feedback": string,   // 1-2 sentences about the specific change only
+  "hint": string        // only if incorrect — a nudge about the one missing change
+}`
+
+  const user = `The one change to find: ${lesson.task}
+
+Student's code:
+${userCode}
+
+Is this specific change present in the code? Judge on that alone.`
+
+  const text = await callClaude(system, user, 256)
+  return parseJSON(text)
+}
+
+/**
+ * Evaluate the student's brute-force solution (lenient on time/space complexity).
+ * Returns { correct, feedback, timeComplexity, spaceComplexity, hint? }
+ */
+export async function evaluateBruteSolution(unit, userCode) {
+  const system = `You are a Java DSA evaluator checking a brute-force solution.
+Accept any approach that produces correct output — O(n²) or worse is fine, extra space is fine.
+Do NOT penalize for time or space complexity. Only check correctness of logic.
+Return ONLY valid JSON — no markdown:
+{
+  "correct": boolean,
+  "feedback": string,         // 1-2 sentences, positive if correct
+  "timeComplexity": string,   // e.g. "O(n²)"
+  "spaceComplexity": string,  // e.g. "O(1)"
+  "hint": string              // only if incorrect — what to revisit
+}`
+
+  const user = `Problem: ${unit.name}
+Description: ${unit.description}
+Test cases: ${JSON.stringify(unit.testCases, null, 2)}
+
+Student's brute-force solution:
 ${userCode}`
 
   const text = await callClaude(system, user, 512)

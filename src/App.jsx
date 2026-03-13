@@ -8,6 +8,7 @@ import { loadProgress, resetUnitProgress, resetMilestoneProgress, resetAllProgre
 import ForestPage from './components/Forest/ForestPage'
 import { clearAllLessonCaches } from './lib/lessonCache'
 import { milestones } from './data/neetcode150'
+import DailyTaskWidget from './components/DailyTask/DailyTaskWidget'
 
 function useClock() {
   const [now, setNow] = useState(new Date())
@@ -219,6 +220,16 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Daily task widget — roadmap view only */}
+      {view === 'roadmap' && (
+        <DailyTaskWidget
+          milestones={milestones}
+          progress={progress}
+          onStartUnit={handleStartUnit}
+          onStartRecall={handleStartRecall}
+        />
+      )}
 
       {/* Celebration overlay */}
       {celebration && (

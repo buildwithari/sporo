@@ -1,12 +1,15 @@
 const STORAGE_KEY = 'sporo_progress'
 
 const defaultUnitProgress = () => ({
-  status: 'new',        // 'new' | 'in_progress' | 'planted' | 'mastered'
-  currentLesson: 0,     // index into generated lessons array
-  lessons: null,        // cached generated lessons from Claude
-  xp: 0,               // XP earned for this unit
-  nextReview: null,     // ISO string
-  interval: 1,          // current SRS interval in days
+  status: 'new',           // 'new' | 'in_progress' | 'planted' | 'mastered'
+  learningPhase: 'brute',  // 'brute' | 'optimal' — which part they're currently on
+  currentLesson: 0,        // brute-force lesson index
+  optCurrentLesson: 0,     // optimal lesson index
+  bfSolvedCode: null,      // the user's accepted brute-force solution (seeds optimal editor)
+  lessons: null,
+  xp: 0,
+  nextReview: null,
+  interval: 1,
   reviewCount: 0,
   lastReview: null,
   usedHintsOnLastRecall: false,

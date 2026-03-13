@@ -2,6 +2,26 @@ import { useState, useEffect } from 'react'
 import LessonEditor from '../CodeEditor/LessonEditor'
 import { getHint } from '../../lib/claude'
 
+function ReferencePanel({ code }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mb-4 border border-stone-200 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-3 py-2 bg-stone-50 hover:bg-stone-100 transition-colors text-sm"
+      >
+        <span className="font-medium text-stone-600">Your brute force</span>
+        <span className="text-stone-400 text-xs">{open ? '▲ hide' : '▼ show'}</span>
+      </button>
+      {open && (
+        <pre className="bg-stone-900 text-stone-300 text-xs font-mono px-4 py-3 overflow-y-auto max-h-52 leading-5 border-t border-stone-700">
+          {code}
+        </pre>
+      )}
+    </div>
+  )
+}
+
 export default function LessonStep({
   lesson,
   lessonIndex,
@@ -14,6 +34,8 @@ export default function LessonStep({
   feedback,
   onNext,
   onPrev,
+  contextCode,    // optional: function signature shown as read-only reference above the editor
+  referenceCode,  // optional: brute force solution shown as a collapsible reference panel
 }) {
   const [code, setCode] = useState(initialCode || '')
   const [hint, setHint] = useState(null)
@@ -47,6 +69,19 @@ export default function LessonStep({
         <h2 className="text-xl font-bold text-stone-800 mb-2">{lesson.title}</h2>
         <p className="text-stone-600 leading-relaxed">{lesson.explanation}</p>
       </div>
+
+      {/* Brute force reference — collapsible, for the optimization phase */}
+      {referenceCode && <ReferencePanel code={referenceCode} />}
+
+      {/* Function signature reference — always visible, never part of the stacked code */}
+      {contextCode && (
+        <div className="mb-3">
+          <div className="text-xs text-stone-400 font-medium mb-1.5">Function signature</div>
+          <pre className="bg-stone-900 text-stone-400 text-xs font-mono px-4 py-3 rounded-lg overflow-x-auto leading-5 border border-stone-700">
+            {contextCode}
+          </pre>
+        </div>
+      )}
 
       {/* Editor — previous steps shown grayed out, comment in green, active region below */}
       <div className="mb-4">
