@@ -78,7 +78,7 @@ export default function LessonFlow({
         setBfFinalCode(savedBfCode)
         setOptLessonIdx(optIdx)
         if (optIdx >= cached.optimal.lessons.length) {
-          setOptFinalCode(savedBfCode)
+          setOptFinalCode(saved.optSolvedCode || savedBfCode)
           setPhase('opt-final')
         } else {
           setPhase(optIdx > 0 ? 'opt-lesson' : 'opt-intro')
@@ -127,7 +127,8 @@ export default function LessonFlow({
   async function handleBfLessonSubmit(code) {
     setPhase('bf-evaluating')
     try {
-      const result = await evaluateCode(lessons.brute.lessons[bfLessonIdx], code, language)
+      const priorCode = bfCompletedSteps.slice(0, bfLessonIdx).map((s) => s.code).join('\n')
+      const result = await evaluateCode(lessons.brute.lessons[bfLessonIdx], code, language, priorCode)
       setBfFeedback(result)
       if (result.correct) {
         addXP(XP_VALUES.LESSON)
@@ -200,7 +201,8 @@ export default function LessonFlow({
   async function handleOptLessonSubmit(code) {
     setPhase('opt-evaluating')
     try {
-      const result = await evaluateCode(lessons.optimal.lessons[optLessonIdx], code, language)
+      const priorCode = optCompletedSteps.slice(0, optLessonIdx).map((s) => s.code).join('\n')
+      const result = await evaluateCode(lessons.optimal.lessons[optLessonIdx], code, language, priorCode)
       setOptFeedback(result)
       if (result.correct) {
         addXP(XP_VALUES.LESSON)
@@ -304,6 +306,7 @@ export default function LessonFlow({
           reviewCount: (saved.reviewCount || 0) + (isRecall ? 1 : 0),
           lastReview: new Date().toISOString(),
           usedHintsOnLastRecall: usedHints > 0,
+          optSolvedCode: optFinalCode,
         })
         addXP(xpGained)
         onProgressUpdate()

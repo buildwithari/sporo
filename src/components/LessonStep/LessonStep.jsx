@@ -39,7 +39,7 @@ export default function LessonStep({
   language,       // language ID for editor syntax + comment prefix
 }) {
   const [code, setCode] = useState(initialCode || '')
-  const [hint, setHint] = useState(null)
+  const [hints, setHints] = useState([])   // accumulated hints in order
   const [loadingHint, setLoadingHint] = useState(false)
 
   // Auto-advance 1.5s after a correct answer
@@ -52,10 +52,12 @@ export default function LessonStep({
   const handleGetHint = async () => {
     setLoadingHint(true)
     try {
-      const h = await getHint(lesson, code, language)
-      setHint(h)
+      const priorCode = completedSteps.map((s) => s.code).join('\n')
+      const hintLevel = hints.length + 1
+      const h = await getHint(lesson, code, language, priorCode, hintLevel)
+      setHints((prev) => [...prev, { level: hintLevel, text: h }])
     } catch {
-      setHint('Think about what data structure gives you O(1) lookups.')
+      setHints((prev) => [...prev, { level: prev.length + 1, text: 'Look at the step description again — what specific value or structure does it ask you to write?' }])
     }
     setLoadingHint(false)
   }
@@ -95,13 +97,29 @@ export default function LessonStep({
         />
       </div>
 
-      {/* Hint */}
-      {hint && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 animate-fade-in">
-          <div className="flex items-start gap-2">
-            <span className="text-amber-500 shrink-0">💡</span>
-            <p className="text-amber-900 text-sm">{hint}</p>
-          </div>
+      {/* Hints — progressive, all shown stacked */}
+      {hints.length > 0 && (
+        <div className="space-y-2 mb-4">
+          {hints.map((h) => (
+            <div key={h.level} className={`border rounded-xl p-4 animate-fade-in ${
+              h.level === 3
+                ? 'bg-stone-900 border-stone-700'
+                : 'bg-amber-50 border-amber-200'
+            }`}>
+              <div className="flex items-start gap-2">
+                <span className="shrink-0 text-sm">{h.level === 1 ? '💡' : h.level === 2 ? '🔍' : '✏️'}</span>
+                <div className="flex-1 min-w-0">
+                  <div className={`text-xs font-semibold mb-1 ${h.level === 3 ? 'text-stone-400' : 'text-amber-600'}`}>
+                    {h.level === 1 ? 'Hint' : h.level === 2 ? 'More detail' : 'Solution'}
+                  </div>
+                  {h.level === 3
+                    ? <pre className="text-stone-300 text-xs font-mono leading-5 whitespace-pre-wrap">{h.text}</pre>
+                    : <p className="text-amber-900 text-sm">{h.text}</p>
+                  }
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -138,13 +156,13 @@ export default function LessonStep({
                 'Check →'
               )}
             </button>
-            {!hint && (
+            {hints.length < 3 && (
               <button
                 onClick={handleGetHint}
                 disabled={loadingHint || isEvaluating}
                 className="text-stone-400 hover:text-stone-600 text-sm font-medium px-3 py-3 rounded-xl hover:bg-stone-100 transition-colors disabled:opacity-40"
               >
-                {loadingHint ? '…' : '💡 Hint'}
+                {loadingHint ? '…' : hints.length === 0 ? '💡 Hint' : hints.length === 1 ? '🔍 More' : '✏️ Show answer'}
               </button>
             )}
           </>
@@ -171,7 +189,7 @@ export default function LessonStep({
                   : 'Not quite'}
               </div>
               {(!feedback.correct) && (
-                <p className="text-red-100 text-sm mt-0.5 truncate">{feedback.hint || feedback.feedback}</p>
+                <p className="text-red-100 text-sm mt-0.5">{feedback.hint || feedback.feedback}</p>
               )}
             </div>
             {feedback.correct && (
