@@ -89,7 +89,7 @@ export default function LessonFlow({
         if (bfIdx >= cached.brute.lessons.length) {
           setPhase('bf-final')
         } else {
-          setPhase(bfIdx > 0 ? 'bf-lesson' : 'bf-intro')
+          setPhase(bfIdx > 0 ? 'bf-lesson' : 'problem-intro')
         }
       }
     } else {
@@ -111,7 +111,7 @@ export default function LessonFlow({
         learningPhase: 'brute',
       })
       setBfLessonIdx(0)
-      setPhase('bf-intro')
+      setPhase('problem-intro')
     } catch (e) {
       setErrorMsg(
         e.message === 'NO_API_KEY'
@@ -357,6 +357,7 @@ export default function LessonFlow({
 
   const partLabel =
     isRecall ? '🔁 Recall'
+    : phase === 'problem-intro' ? '📋 Problem'
     : isBfFinalPhase || ['bf-intro', 'bf-lesson', 'bf-evaluating'].includes(phase)
       ? '🔨 Part 1: Brute Force'
       : '🚀 Part 2: Optimize'
@@ -416,6 +417,54 @@ export default function LessonFlow({
             className="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors"
           >
             Retry
+          </button>
+        </div>
+      )}
+
+      {/* ── Problem Intro ── */}
+      {phase === 'problem-intro' && (
+        <div className="animate-slide-up">
+          <div className="bg-white border border-stone-200 rounded-2xl p-8 mb-6 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-3xl">📋</span>
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                unit.difficulty === 'Easy' ? 'bg-emerald-100 text-emerald-700' :
+                unit.difficulty === 'Medium' ? 'bg-amber-100 text-amber-700' :
+                unit.difficulty === 'Hard' ? 'bg-red-100 text-red-700' :
+                'bg-stone-100 text-stone-500'
+              }`}>{unit.difficulty || 'Problem'}</span>
+            </div>
+            <h2 className="text-xl font-bold text-stone-800 mb-3">{unit.name}</h2>
+            {unit.summary && (
+              <p className="text-stone-600 leading-relaxed mb-4">{unit.summary}</p>
+            )}
+            <p className="text-stone-600 text-sm leading-relaxed whitespace-pre-wrap mb-6">{unit.description}</p>
+
+            {unit.testCases && unit.testCases.length > 0 && (
+              <div className="space-y-3">
+                {unit.testCases.map((tc, i) => (
+                  <div key={i}>
+                    <div className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-2">Example {i + 1}</div>
+                    <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 text-sm font-mono space-y-1.5">
+                      <div className="flex gap-3">
+                        <span className="text-stone-400 shrink-0 w-16">Input:</span>
+                        <span className="text-stone-700">{tc.input}</span>
+                      </div>
+                      <div className="flex gap-3">
+                        <span className="text-stone-400 shrink-0 w-16">Output:</span>
+                        <span className="text-emerald-600 font-semibold">{tc.expected}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => setPhase('bf-intro')}
+            className="w-full bg-stone-800 hover:bg-stone-900 text-white font-bold py-4 rounded-xl text-lg transition-colors"
+          >
+            Start solving →
           </button>
         </div>
       )}
