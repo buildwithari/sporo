@@ -190,7 +190,7 @@ export default function App() {
       </nav>
 
       {/* Content — milestone page gets extra width for the sidebar */}
-      <main className={`mx-auto px-4 py-8 ${view === 'milestone' ? 'max-w-5xl' : 'max-w-2xl'}`}>
+      <main className={`mx-auto px-4 py-8 ${view === 'milestone' ? 'max-w-5xl' : view === 'forest' ? 'max-w-4xl' : 'max-w-2xl'}`}>
         {view === 'roadmap' && (
           <Roadmap
             milestones={milestones}

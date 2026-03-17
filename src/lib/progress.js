@@ -122,3 +122,51 @@ export function purchasePlant(plantId, cost) {
   saveProgress(p)
   return { success: true }
 }
+
+/** Returns the Monday (00:00:00) of the week containing the given date. */
+function getMondayOf(date) {
+  const d = new Date(date)
+  const day = d.getDay() // 0 = Sunday, 1 = Monday, ...
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+/**
+ * Check if the current forest week has expired (7 days since forestWeekStart).
+ * If so, archive the current forest to forestHistory and reset.
+ * Returns { didReset, progress }.
+ */
+export function checkAndResetForest() {
+  const p = loadProgress()
+  const now = new Date()
+
+  if (!p.user.forest) p.user.forest = []
+  if (!p.user.forestHistory) p.user.forestHistory = []
+
+  const currentMonday = getMondayOf(now)
+
+  if (!p.user.forestWeekStart) {
+    p.user.forestWeekStart = currentMonday.toISOString()
+    saveProgress(p)
+    return { didReset: false, progress: p }
+  }
+
+  const storedMonday = getMondayOf(new Date(p.user.forestWeekStart))
+
+  if (currentMonday > storedMonday) {
+    if (p.user.forest.length > 0) {
+      p.user.forestHistory = [
+        { weekStart: p.user.forestWeekStart, plants: p.user.forest },
+        ...p.user.forestHistory,
+      ]
+    }
+    p.user.forest = []
+    p.user.forestWeekStart = currentMonday.toISOString()
+    saveProgress(p)
+    return { didReset: true, progress: p }
+  }
+
+  return { didReset: false, progress: p }
+}
