@@ -11,7 +11,16 @@ const MILESTONE_STYLES = {
   'linked-list':         { bg: 'bg-cyan-500',    light: 'bg-cyan-50',    border: 'border-cyan-200',    ring: 'ring-cyan-300',    text: 'text-cyan-700' },
   'trees':               { bg: 'bg-lime-500',    light: 'bg-lime-50',    border: 'border-lime-200',    ring: 'ring-lime-300',    text: 'text-lime-700' },
   'graphs':              { bg: 'bg-rose-500',    light: 'bg-rose-50',    border: 'border-rose-200',    ring: 'ring-rose-300',    text: 'text-rose-700' },
+  'tries':               { bg: 'bg-sky-500',     light: 'bg-sky-50',     border: 'border-sky-200',     ring: 'ring-sky-300',     text: 'text-sky-700' },
+  'heap-priority-queue': { bg: 'bg-red-500',     light: 'bg-red-50',     border: 'border-red-200',     ring: 'ring-red-300',     text: 'text-red-700' },
+  'backtracking':        { bg: 'bg-fuchsia-500', light: 'bg-fuchsia-50', border: 'border-fuchsia-200', ring: 'ring-fuchsia-300', text: 'text-fuchsia-700' },
+  'advanced-graphs':     { bg: 'bg-pink-500',    light: 'bg-pink-50',    border: 'border-pink-200',    ring: 'ring-pink-300',    text: 'text-pink-700' },
   'dynamic-programming': { bg: 'bg-purple-500',  light: 'bg-purple-50',  border: 'border-purple-200',  ring: 'ring-purple-300',  text: 'text-purple-700' },
+  '2d-dynamic-programming': { bg: 'bg-indigo-500', light: 'bg-indigo-50', border: 'border-indigo-200', ring: 'ring-indigo-300', text: 'text-indigo-700' },
+  'greedy':              { bg: 'bg-yellow-500',  light: 'bg-yellow-50',  border: 'border-yellow-200',  ring: 'ring-yellow-300',  text: 'text-yellow-700' },
+  'intervals':           { bg: 'bg-amber-500',   light: 'bg-amber-50',   border: 'border-amber-200',   ring: 'ring-amber-300',   text: 'text-amber-700' },
+  'math-geometry':       { bg: 'bg-slate-500',   light: 'bg-slate-50',   border: 'border-slate-200',   ring: 'ring-slate-300',   text: 'text-slate-700' },
+  'bit-manipulation':    { bg: 'bg-zinc-600',    light: 'bg-zinc-50',    border: 'border-zinc-200',    ring: 'ring-zinc-300',    text: 'text-zinc-700' },
 }
 
 const DEFAULT_STYLE = { bg: 'bg-stone-400', light: 'bg-stone-50', border: 'border-stone-200', ring: 'ring-stone-300', text: 'text-stone-600' }
@@ -259,7 +268,7 @@ function MilestoneSection({ milestone, progress, onStartUnit, onStartRecall, onM
                 onRecall={(u) => onStartRecall(u, milestone)}
                 onReset={(u) => onResetUnit(u)}
                 index={i}
-                isLocked={i > effectiveFrontier}
+                isLocked={i > effectiveFrontier && !['planted', 'mastered', 'in_progress'].includes(progress.units?.[unit.id]?.status)}
               />
             </div>
           ))}

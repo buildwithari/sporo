@@ -107,6 +107,20 @@ export default function App() {
   const totalXP = progress.user?.totalXP || 0
   const streak = progress.user?.streak || 0
 
+  const unlockedMilestones = milestones.map((ms, i) => {
+    if (i === 0) return ms // first milestone always unlocked
+    const prev = milestones[i - 1]
+    const prevComplete = (prev.units || []).every((u) => {
+      const s = progress.units?.[u.id]?.status
+      return s === 'planted' || s === 'mastered'
+    })
+    const hasExistingProgress = (ms.units || []).some((u) => {
+      const s = progress.units?.[u.id]?.status
+      return s && s !== 'new'
+    })
+    return { ...ms, unlocked: prevComplete || hasExistingProgress }
+  })
+
   return (
     <div className="min-h-screen bg-stone-50">
       {/* Nav */}
@@ -193,7 +207,7 @@ export default function App() {
       <main className={`mx-auto px-4 py-8 ${view === 'milestone' ? 'max-w-5xl' : view === 'forest' ? 'max-w-4xl' : 'max-w-2xl'}`}>
         {view === 'roadmap' && (
           <Roadmap
-            milestones={milestones}
+            milestones={unlockedMilestones}
             progress={progress}
             onStartUnit={handleStartUnit}
             onStartRecall={handleStartRecall}
@@ -212,7 +226,7 @@ export default function App() {
 
         {view === 'daily-plan' && (
           <DailyPlan
-            milestones={milestones}
+            milestones={unlockedMilestones}
             progress={progress}
             onStartUnit={handleStartUnit}
             onStartRecall={handleStartRecall}
@@ -242,7 +256,7 @@ export default function App() {
       {/* Daily task widget — roadmap view only */}
       {view === 'roadmap' && (
         <DailyTaskWidget
-          milestones={milestones}
+          milestones={unlockedMilestones}
           progress={progress}
           onStartUnit={handleStartUnit}
           onStartRecall={handleStartRecall}
