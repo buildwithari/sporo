@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { isDue, isOverdue } from '../../lib/srs'
 
 // Colors per milestone
@@ -152,9 +152,7 @@ function Connector({ fromOffset, toOffset }) {
   )
 }
 
-function MilestoneSection({ milestone, progress, onStartUnit, onStartRecall, onMilestoneClick, onResetUnit, onResetMilestone }) {
-  const [open, setOpen] = useState(milestone.unlocked && milestone.id === 'arrays-hashing')
-  const [confirmingMilestoneReset, setConfirmingMilestoneReset] = useState(false)
+function MilestoneSection({ milestone, progress, isActive, onStartUnit, onStartRecall, onMilestoneClick, onResetUnit, onResetMilestone }) {
   const style = MILESTONE_STYLES[milestone.id] ?? DEFAULT_STYLE
   const units = milestone.units || []
 
@@ -162,6 +160,16 @@ function MilestoneSection({ milestone, progress, onStartUnit, onStartRecall, onM
     const s = progress.units?.[u.id]?.status
     return s === 'planted' || s === 'mastered'
   }).length
+
+  const isComplete = units.length > 0 && completedCount === units.length
+
+  const hasRecallsDue = units.some((u) => {
+    const up = progress.units?.[u.id]
+    return (up?.status === 'planted' || up?.status === 'mastered') && isDue(up.nextReview)
+  })
+
+  const [open, setOpen] = useState(milestone.unlocked && (isActive || hasRecallsDue))
+  const [confirmingMilestoneReset, setConfirmingMilestoneReset] = useState(false)
 
   // The frontier is the first unit that isn't completed yet.
   // Units after the frontier are locked; completed units before it stay accessible.
@@ -250,28 +258,36 @@ function MilestoneSection({ milestone, progress, onStartUnit, onStartRecall, onM
       </div>
 
       {/* Unit nodes — winding path */}
-      {milestone.unlocked && open && (
-        <div className="flex flex-col items-center">
-          {units.map((unit, i) => (
-            <div key={unit.id} className="flex flex-col items-center w-full">
-              {i > 0 && (
-                <Connector
-                  fromOffset={WAVE[(i - 1) % WAVE.length]}
-                  toOffset={WAVE[i % WAVE.length]}
+      {milestone.unlocked && (
+        <div
+          style={{
+            overflow: 'hidden',
+            maxHeight: open ? '9999px' : '0',
+            transition: open ? 'max-height 0.6s ease-in' : 'max-height 0.45s ease-out',
+          }}
+        >
+          <div className="flex flex-col items-center">
+            {units.map((unit, i) => (
+              <div key={unit.id} className="flex flex-col items-center w-full">
+                {i > 0 && (
+                  <Connector
+                    fromOffset={WAVE[(i - 1) % WAVE.length]}
+                    toOffset={WAVE[i % WAVE.length]}
+                  />
+                )}
+                <UnitNode
+                  unit={unit}
+                  unitProgress={progress.units?.[unit.id]}
+                  style={style}
+                  onStart={(u) => onStartUnit(u, milestone)}
+                  onRecall={(u) => onStartRecall(u, milestone)}
+                  onReset={(u) => onResetUnit(u)}
+                  index={i}
+                  isLocked={i > effectiveFrontier && !['planted', 'mastered', 'in_progress'].includes(progress.units?.[unit.id]?.status)}
                 />
-              )}
-              <UnitNode
-                unit={unit}
-                unitProgress={progress.units?.[unit.id]}
-                style={style}
-                onStart={(u) => onStartUnit(u, milestone)}
-                onRecall={(u) => onStartRecall(u, milestone)}
-                onReset={(u) => onResetUnit(u)}
-                index={i}
-                isLocked={i > effectiveFrontier && !['planted', 'mastered', 'in_progress'].includes(progress.units?.[unit.id]?.status)}
-              />
-            </div>
-          ))}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -286,6 +302,17 @@ export default function Roadmap({ milestones, progress, onStartUnit, onStartReca
   const dueToday = Object.entries(progress.units || {}).filter(
     ([, u]) => (u.status === 'planted' || u.status === 'mastered') && isDue(u.nextReview)
   ).length
+
+  // The active milestone is the first unlocked one that isn't fully complete
+  const activeMilestoneId = milestones.find((ms) => {
+    if (!ms.unlocked) return false
+    const units = ms.units || []
+    const completedCount = units.filter((u) => {
+      const s = progress.units?.[u.id]?.status
+      return s === 'planted' || s === 'mastered'
+    }).length
+    return units.length === 0 || completedCount < units.length
+  })?.id
 
   return (
     <div className="animate-fade-in">
@@ -311,6 +338,7 @@ export default function Roadmap({ milestones, progress, onStartUnit, onStartReca
           key={ms.id}
           milestone={ms}
           progress={progress}
+          isActive={ms.id === activeMilestoneId}
           onStartUnit={onStartUnit}
           onStartRecall={onStartRecall}
           onMilestoneClick={onMilestoneClick}

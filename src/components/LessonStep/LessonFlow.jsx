@@ -15,6 +15,105 @@ import {
 import { getCachedLessons, setCachedLessons, clearCachedLessons } from '../../lib/lessonCache'
 import { getNextInterval, getNextReviewDate } from '../../lib/srs'
 
+function ProblemStatement({ unit, lessons, phaseLabel, showBruteForceTip, isRecall, stuck, onGetStuck }) {
+  return (
+    <div className="w-1/2 overflow-y-auto p-6 border-r border-stone-200 bg-white">
+      <h2 className="text-stone-800 font-bold text-lg mb-2">{unit.name}</h2>
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        {unit.difficulty && (
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+            unit.difficulty === 'Easy' ? 'bg-emerald-100 text-emerald-700' :
+            unit.difficulty === 'Medium' ? 'bg-amber-100 text-amber-700' :
+            'bg-red-100 text-red-700'
+          }`}>
+            {unit.difficulty}
+          </span>
+        )}
+        {phaseLabel && (
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${phaseLabel.className}`}>
+            {phaseLabel.text}
+          </span>
+        )}
+      </div>
+
+      <p className="text-stone-600 text-sm leading-relaxed whitespace-pre-wrap mb-6">
+        {unit.description || lessons?.description}
+      </p>
+
+      {unit.testCases && unit.testCases.length > 0 && (
+        <div className="space-y-4 mb-6">
+          {unit.testCases.map((tc, i) => (
+            <div key={i}>
+              <div className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-2">
+                Example {i + 1}
+              </div>
+              <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 text-sm font-mono space-y-1.5">
+                <div className="flex gap-3">
+                  <span className="text-stone-400 shrink-0 w-16">Input:</span>
+                  <span className="text-stone-700">{tc.input}</span>
+                </div>
+                <div className="flex gap-3">
+                  <span className="text-stone-400 shrink-0 w-16">Output:</span>
+                  <span className="text-emerald-600 font-semibold">{tc.expected}</span>
+                </div>
+                {tc.explanation && (
+                  <div className="flex gap-3 pt-1 border-t border-stone-200 font-sans">
+                    <span className="text-stone-400 shrink-0 w-16">Explain:</span>
+                    <span className="text-stone-500 text-xs leading-relaxed">{tc.explanation}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {unit.constraints && unit.constraints.length > 0 && (
+        <div className="mb-6">
+          <div className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-2">Constraints</div>
+          <ul className="space-y-1">
+            {unit.constraints.map((c, i) => (
+              <li key={i} className="text-stone-600 text-xs font-mono flex gap-2">
+                <span className="text-stone-300 shrink-0">•</span>
+                <span>{c}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {unit.followUp && (
+        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm">
+          <p className="font-semibold text-blue-800 mb-1">Follow-up</p>
+          <p className="text-blue-700 text-xs leading-relaxed">{unit.followUp}</p>
+        </div>
+      )}
+
+      {showBruteForceTip && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
+          <p className="font-semibold text-amber-800 mb-1">🔨 Brute force is fine here</p>
+          <p className="text-amber-700 text-xs leading-relaxed">
+            Don't worry about time or space complexity yet — just write the simplest
+            solution that produces correct output. We'll make it faster in Part 2.
+          </p>
+        </div>
+      )}
+
+      {isRecall && !stuck && onGetStuck && (
+        <div className="mt-8 pt-6 border-t border-stone-100">
+          <p className="text-stone-400 text-xs mb-3">Can't remember the optimal approach?</p>
+          <button
+            onClick={onGetStuck}
+            className="text-sm font-medium text-stone-500 hover:text-stone-800 border border-stone-200 hover:border-stone-400 px-4 py-2 rounded-xl transition-colors"
+          >
+            I'm stuck — walk me through it
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const XP_VALUES = {
   LESSON: 10,
   BF_SOLVE: 20,
@@ -517,14 +616,14 @@ export default function LessonFlow({
           lessonIndex={bfLessonIdx}
           totalLessons={lessons.brute.lessons.length}
           completedSteps={bfCompletedSteps.slice(0, bfLessonIdx)}
-          initialCode={bfCompletedSteps[bfLessonIdx]?.code ?? ''}
+          initialCode={bfCompletedSteps[bfLessonIdx]?.code ?? (bfLessonIdx === 0 ? starterCode : '')}
           alreadyCompleted={bfLessonIdx < bfCompletedSteps.length}
           onSubmit={handleBfLessonSubmit}
           isEvaluating={phase === 'bf-evaluating'}
           feedback={bfFeedback}
           onNext={handleBfNextLesson}
           onPrev={handleBfStepBack}
-          contextCode={starterCode}
+          contextCode={bfLessonIdx === 0 ? undefined : starterCode}
           language={language}
         />
       )}
@@ -557,7 +656,7 @@ export default function LessonFlow({
           lessonIndex={optLessonIdx}
           totalLessons={lessons.optimal.lessons.length}
           completedSteps={optCompletedSteps.slice(0, optLessonIdx)}
-          initialCode={optCompletedSteps[optLessonIdx]?.code ?? ''}
+          initialCode={optCompletedSteps[optLessonIdx]?.code ?? (optLessonIdx === 0 ? bfFinalCode : '')}
           alreadyCompleted={optLessonIdx < optCompletedSteps.length}
           onSubmit={handleOptLessonSubmit}
           isEvaluating={phase === 'opt-evaluating'}
@@ -565,80 +664,22 @@ export default function LessonFlow({
           onNext={handleOptNextLesson}
           onPrev={handleOptStepBack}
           referenceCode={bfFinalCode}
-          contextCode={starterCode}
+          contextCode={optLessonIdx === 0 ? undefined : starterCode}
           language={language}
         />
       )}
 
       {/* ── Part 1 Final Editor (full-screen) ── */}
       {isBfFinalPhase && (
-        <div className="fixed inset-0 bg-stone-50 z-50 flex flex-col animate-fade-in">
-          <div className="flex items-center gap-3 px-4 py-2.5 bg-white border-b border-stone-200 shrink-0">
-            <button
-              onClick={() => {
-                setBfFinalFeedback(null)
-                if (lessons?.brute?.lessons?.length > 0) {
-                  setBfLessonIdx(lessons.brute.lessons.length - 1)
-                  setPhase('bf-lesson')
-                } else {
-                  setPhase('bf-intro')
-                }
-              }}
-              className="text-stone-400 hover:text-stone-700 transition-colors text-lg leading-none px-1"
-            >
-              ←
-            </button>
-            <span className="text-stone-800 font-semibold text-sm">{unit.name}</span>
-            <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-              🔨 Part 1 — Brute Force
-            </span>
-          </div>
-
+        <div className="fixed top-14 inset-x-0 bottom-0 bg-stone-50 z-30 flex flex-col animate-fade-in">
           <div className="flex-1 flex overflow-hidden">
-            {/* Left: problem + hint */}
-            <div className="w-1/2 overflow-y-auto p-6 border-r border-stone-200 bg-white">
-              <h2 className="text-stone-800 font-bold text-lg mb-1">{unit.name}</h2>
-              {unit.difficulty && (
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-block mb-4 ${
-                  unit.difficulty === 'Easy' ? 'bg-emerald-100 text-emerald-700' :
-                  unit.difficulty === 'Medium' ? 'bg-amber-100 text-amber-700' :
-                  'bg-red-100 text-red-700'
-                }`}>
-                  {unit.difficulty}
-                </span>
-              )}
-              <p className="text-stone-600 text-sm leading-relaxed whitespace-pre-wrap mb-6">
-                {unit.description || lessons?.description}
-              </p>
-              {unit.testCases && (
-                <div className="space-y-4 mb-6">
-                  {unit.testCases.map((tc, i) => (
-                    <div key={i}>
-                      <div className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-2">
-                        Example {i + 1}
-                      </div>
-                      <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 text-sm font-mono space-y-1.5">
-                        <div className="flex gap-3">
-                          <span className="text-stone-400 shrink-0 w-16">Input:</span>
-                          <span className="text-stone-700">{tc.input}</span>
-                        </div>
-                        <div className="flex gap-3">
-                          <span className="text-stone-400 shrink-0 w-16">Output:</span>
-                          <span className="text-emerald-600 font-semibold">{tc.expected}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm">
-                <p className="font-semibold text-amber-800 mb-1">🔨 Brute force is fine here</p>
-                <p className="text-amber-700 text-xs leading-relaxed">
-                  Don't worry about time or space complexity yet — just write the simplest
-                  solution that produces correct output. We'll make it faster in Part 2.
-                </p>
-              </div>
-            </div>
+            {/* Left: problem statement */}
+            <ProblemStatement
+              unit={unit}
+              lessons={lessons}
+              phaseLabel={{ text: '🔨 Brute Force', className: 'bg-amber-50 text-amber-700 border border-amber-200' }}
+              showBruteForceTip
+            />
 
             {/* Right: editor + submit */}
             <div className="w-1/2 flex flex-col overflow-hidden bg-stone-50">
@@ -701,77 +742,21 @@ export default function LessonFlow({
 
       {/* ── Part 2 Final Editor (full-screen) ── */}
       {isOptFinalPhase && (
-        <div className="fixed inset-0 bg-stone-50 z-50 flex flex-col animate-fade-in">
-          <div className="flex items-center gap-3 px-4 py-2.5 bg-white border-b border-stone-200 shrink-0">
-            <button
-              onClick={handleOptStepBack}
-              className="text-stone-400 hover:text-stone-700 transition-colors text-lg leading-none px-1"
-            >
-              ←
-            </button>
-            <span className="text-stone-800 font-semibold text-sm">{unit.name}</span>
-            {isRecall && !stuck ? (
-              <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                🔁 Recall
-              </span>
-            ) : (
-              <span className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                🚀 Part 2 — Optimal
-              </span>
-            )}
-          </div>
-
+        <div className="fixed top-14 inset-x-0 bottom-0 bg-stone-50 z-30 flex flex-col animate-fade-in">
           <div className="flex-1 flex overflow-hidden">
-            {/* Left: problem */}
-            <div className="w-1/2 overflow-y-auto p-6 border-r border-stone-200 bg-white">
-              <h2 className="text-stone-800 font-bold text-lg mb-1">{unit.name}</h2>
-              {unit.difficulty && (
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-block mb-4 ${
-                  unit.difficulty === 'Easy' ? 'bg-emerald-100 text-emerald-700' :
-                  unit.difficulty === 'Medium' ? 'bg-amber-100 text-amber-700' :
-                  'bg-red-100 text-red-700'
-                }`}>
-                  {unit.difficulty}
-                </span>
-              )}
-              <p className="text-stone-600 text-sm leading-relaxed whitespace-pre-wrap mb-6">
-                {unit.description || lessons?.description}
-              </p>
-              {unit.testCases && (
-                <div className="space-y-4">
-                  {unit.testCases.map((tc, i) => (
-                    <div key={i}>
-                      <div className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-2">
-                        Example {i + 1}
-                      </div>
-                      <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 text-sm font-mono space-y-1.5">
-                        <div className="flex gap-3">
-                          <span className="text-stone-400 shrink-0 w-16">Input:</span>
-                          <span className="text-stone-700">{tc.input}</span>
-                        </div>
-                        <div className="flex gap-3">
-                          <span className="text-stone-400 shrink-0 w-16">Output:</span>
-                          <span className="text-emerald-600 font-semibold">{tc.expected}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* I'm stuck — recall mode only */}
-              {isRecall && !stuck && (
-                <div className="mt-8 pt-6 border-t border-stone-100">
-                  <p className="text-stone-400 text-xs mb-3">Can't remember the optimal approach?</p>
-                  <button
-                    onClick={handleGetStuck}
-                    className="text-sm font-medium text-stone-500 hover:text-stone-800 border border-stone-200 hover:border-stone-400 px-4 py-2 rounded-xl transition-colors"
-                  >
-                    I'm stuck — walk me through it
-                  </button>
-                </div>
-              )}
-            </div>
+            {/* Left: problem statement */}
+            <ProblemStatement
+              unit={unit}
+              lessons={lessons}
+              phaseLabel={
+                isRecall && !stuck
+                  ? { text: '🔁 Recall', className: 'bg-amber-50 text-amber-700 border border-amber-200' }
+                  : { text: '🚀 Optimal', className: 'bg-emerald-50 text-emerald-700 border border-emerald-200' }
+              }
+              isRecall={isRecall}
+              stuck={stuck}
+              onGetStuck={handleGetStuck}
+            />
 
             {/* Right: editor + submit */}
             <div className="w-1/2 flex flex-col overflow-hidden bg-stone-50">
