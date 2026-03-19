@@ -68,8 +68,9 @@ export default function LessonFlow({
     }
 
     const cached = getCachedLessons(unit.id, language)
-    // Only use cache if it has the new two-part shape; otherwise regenerate
-    if (cached?.brute?.lessons && cached?.optimal?.lessons) {
+    // Use cache only if it has the two-part shape AND a summary (for stubs without static description)
+    const needsGeneratedSummary = !unit.description
+    if (cached?.brute?.lessons && cached?.optimal?.lessons && (!needsGeneratedSummary || cached.summary)) {
       setLessons(cached)
       const saved = getUnitProgress(unit.id)
       if ((saved.learningPhase ?? 'brute') === 'optimal') {
@@ -110,6 +111,7 @@ export default function LessonFlow({
         currentLesson: 0,
         learningPhase: 'brute',
       })
+      onProgressUpdate()
       setBfLessonIdx(0)
       setPhase('problem-intro')
     } catch (e) {
@@ -435,10 +437,12 @@ export default function LessonFlow({
               }`}>{unit.difficulty || 'Problem'}</span>
             </div>
             <h2 className="text-xl font-bold text-stone-800 mb-3">{unit.name}</h2>
-            {unit.summary && (
-              <p className="text-stone-600 leading-relaxed mb-4">{unit.summary}</p>
+            {(unit.summary || lessons?.summary) && (
+              <p className="text-stone-600 leading-relaxed mb-4">{unit.summary || lessons.summary}</p>
             )}
-            <p className="text-stone-600 text-sm leading-relaxed whitespace-pre-wrap mb-6">{unit.description}</p>
+            {(unit.description || lessons?.description) && (
+              <p className="text-stone-600 text-sm leading-relaxed whitespace-pre-wrap mb-6">{unit.description || lessons.description}</p>
+            )}
 
             {unit.testCases && unit.testCases.length > 0 && (
               <div className="space-y-3">

@@ -79,6 +79,8 @@ Rules for lessons:
 
 Return exactly this shape:
 {
+  "summary": string,    // 1-2 casual plain-English sentences explaining what the problem is asking, like you're talking to a friend
+  "description": string, // the precise problem statement: inputs, outputs, constraints
   "brute": {
     "intro": string,      // 2-3 plain-English sentences describing the brute-force idea and why it works
     "lessons": [          // 3-5 lessons, each covering exactly one small coding action
@@ -104,7 +106,7 @@ Return exactly this shape:
 }`
 
   const user = `Problem: ${unit.name}
-Description: ${unit.description}
+Description: ${unit.description || '(look up the standard LeetCode problem by this name)'}
 Language: ${lang}
 Starter code:
 ${starterCode}`
