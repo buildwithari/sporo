@@ -15,10 +15,20 @@ import {
 import { getCachedLessons, setCachedLessons, clearCachedLessons } from '../../lib/lessonCache'
 import { getNextInterval, getNextReviewDate } from '../../lib/srs'
 
-function ProblemStatement({ unit, lessons, phaseLabel, showBruteForceTip, isRecall, stuck, onGetStuck }) {
+function ProblemStatement({ unit, lessons, phaseLabel, onBack, showBruteForceTip, isRecall, stuck, onGetStuck }) {
   return (
     <div className="w-1/2 overflow-y-auto p-6 border-r border-stone-200 bg-white">
-      <h2 className="text-stone-800 font-bold text-lg mb-2">{unit.name}</h2>
+      <div className="flex items-center gap-2 mb-2">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="text-stone-400 hover:text-stone-700 transition-colors text-lg leading-none shrink-0"
+          >
+            ←
+          </button>
+        )}
+        <h2 className="text-stone-800 font-bold text-lg">{unit.name}</h2>
+      </div>
       <div className="flex items-center gap-2 mb-4 flex-wrap">
         {unit.difficulty && (
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
@@ -679,6 +689,15 @@ export default function LessonFlow({
               unit={unit}
               lessons={lessons}
               phaseLabel={{ text: '🔨 Brute Force', className: 'bg-amber-50 text-amber-700 border border-amber-200' }}
+              onBack={() => {
+                setBfFinalFeedback(null)
+                if (lessons?.brute?.lessons?.length > 0) {
+                  setBfLessonIdx(lessons.brute.lessons.length - 1)
+                  setPhase('bf-lesson')
+                } else {
+                  setPhase('bf-intro')
+                }
+              }}
               showBruteForceTip
             />
 
@@ -754,6 +773,7 @@ export default function LessonFlow({
                   ? { text: '🔁 Recall', className: 'bg-amber-50 text-amber-700 border border-amber-200' }
                   : { text: '🚀 Optimal', className: 'bg-emerald-50 text-emerald-700 border border-emerald-200' }
               }
+              onBack={handleOptStepBack}
               isRecall={isRecall}
               stuck={stuck}
               onGetStuck={handleGetStuck}
@@ -800,7 +820,7 @@ export default function LessonFlow({
                       <span className="inline-block animate-spin">⟳</span> Evaluating…
                     </span>
                   ) : (
-                    'Submit solution →'
+                    'Submit optimized solution →'
                   )}
                 </button>
               </div>
