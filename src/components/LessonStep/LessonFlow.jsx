@@ -101,12 +101,13 @@ function ProblemStatement({ unit, lessons, phaseLabel, showBruteForceTip, isReca
 
       {isRecall && !stuck && onGetStuck && (
         <div className="mt-8 pt-6 border-t border-stone-100">
-          <p className="text-stone-400 text-xs mb-3">Can't remember the optimal approach?</p>
+          <p className="text-stone-500 text-sm font-medium mb-2">Can't remember the optimal approach?</p>
+          <p className="text-stone-400 text-xs mb-4">Get a full walkthrough of the optimal solution.</p>
           <button
             onClick={onGetStuck}
-            className="text-sm font-medium text-stone-500 hover:text-stone-800 border border-stone-200 hover:border-stone-400 px-4 py-2 rounded-xl transition-colors"
+            className="w-full bg-stone-800 hover:bg-stone-900 text-white font-semibold py-3 px-4 rounded-xl transition-colors text-sm"
           >
-            I'm stuck — walk me through it
+            I'm stuck, walk me through it
           </button>
         </div>
       )}
@@ -683,8 +684,8 @@ export default function LessonFlow({
 
             {/* Right: editor + submit */}
             <div className="w-1/2 flex flex-col overflow-hidden bg-stone-50">
-              <div className="flex-1 overflow-auto p-4">
-                <CodeEditor value={bfFinalCode} onChange={setBfFinalCode} minHeight="100%" language={language} />
+              <div className="flex-1 overflow-hidden p-4">
+                <CodeEditor value={bfFinalCode} onChange={setBfFinalCode} height="100%" language={language} />
               </div>
 
               {bfFinalFeedback && (
@@ -760,8 +761,8 @@ export default function LessonFlow({
 
             {/* Right: editor + submit */}
             <div className="w-1/2 flex flex-col overflow-hidden bg-stone-50">
-              <div className="flex-1 overflow-auto p-4">
-                <CodeEditor value={optFinalCode} onChange={setOptFinalCode} minHeight="100%" language={language} />
+              <div className="flex-1 overflow-hidden p-4">
+                <CodeEditor value={optFinalCode} onChange={setOptFinalCode} height="100%" language={language} />
               </div>
 
               {optFinalFeedback && (
