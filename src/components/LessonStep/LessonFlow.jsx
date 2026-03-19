@@ -608,7 +608,7 @@ export default function LessonFlow({
                 </span>
               )}
               <p className="text-stone-600 text-sm leading-relaxed whitespace-pre-wrap mb-6">
-                {unit.description}
+                {unit.description || lessons?.description}
               </p>
               {unit.testCases && (
                 <div className="space-y-4 mb-6">
@@ -735,7 +735,7 @@ export default function LessonFlow({
                 </span>
               )}
               <p className="text-stone-600 text-sm leading-relaxed whitespace-pre-wrap mb-6">
-                {unit.description}
+                {unit.description || lessons?.description}
               </p>
               {unit.testCases && (
                 <div className="space-y-4">
