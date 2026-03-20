@@ -35,13 +35,22 @@ function parseJSON(text) {
   try {
     return JSON.parse(stripped)
   } catch {
-    // Fallback: extract the first {...} block from the text
-    const match = stripped.match(/\{[\s\S]*\}/)
-    if (match) {
-      try {
-        return JSON.parse(match[0])
-      } catch (e2) {
-        console.error('parseJSON fallback failed. Raw response:', text, e2)
+    // Fallback: find the outermost {...} by walking backwards from the last }
+    // This avoids matching { characters that appear in prose before the JSON object
+    const lastBrace = stripped.lastIndexOf('}')
+    if (lastBrace !== -1) {
+      let depth = 0
+      for (let i = lastBrace; i >= 0; i--) {
+        if (stripped[i] === '}') depth++
+        if (stripped[i] === '{') depth--
+        if (depth === 0) {
+          try {
+            return JSON.parse(stripped.slice(i, lastBrace + 1))
+          } catch (e2) {
+            console.error('parseJSON fallback failed. Raw response:', text, e2)
+            break
+          }
+        }
       }
     }
     console.error('parseJSON failed. Raw response:', text)
@@ -69,7 +78,7 @@ export async function generateLessons(unit, language = 'java') {
 Return ONLY a JSON object — no markdown, no extra text.
 
 Part 1 ("brute"): teach the simplest correct approach, step by step.
-Part 2 ("optimal"): teach how to evolve that brute-force into the efficient solution, one small change at a time.
+Part 2 ("optimal"): teach the efficient solution by building it from scratch, one small piece at a time. The student writes fresh optimal code — the brute-force is shown as a read-only reference panel, not in the editor. Do NOT generate tasks like "remove X" or "modify Y" — every task must be something the student writes from a blank slate.
 
 Rules for lessons:
 - Each lesson task must be SMALL — 1 to 3 lines of code at most. If a step needs more, split it into two lessons.
@@ -81,6 +90,11 @@ Return exactly this shape:
 {
   "summary": string,    // 1-2 casual plain-English sentences explaining what the problem is asking, like you're talking to a friend
   "description": string, // the precise problem statement: inputs, outputs, constraints
+  "testCases": [        // 2-3 representative test cases
+    { "input": string, "expected": string, "explanation": string }
+  ],
+  "constraints": string[], // e.g. ["1 <= nums.length <= 10^5", "-10^9 <= nums[i] <= 10^9"]
+  "followUp": string,   // optional — only include if the problem has a classic follow-up challenge
   "brute": {
     "intro": string,      // 2-3 plain-English sentences describing the brute-force idea and why it works
     "lessons": [          // 3-5 lessons, each covering exactly one small coding action
@@ -93,13 +107,13 @@ Return exactly this shape:
     ]
   },
   "optimal": {
-    "intro": string,      // 2-3 sentences: the key insight that unlocks the faster solution and what changes
-    "lessons": [          // 3-5 lessons — each one a single focused edit to the brute-force code
+    "intro": string,      // 2-3 sentences: the key insight that unlocks the faster solution and why it's better
+    "lessons": [          // 3-5 lessons — build the optimal solution from scratch, one small piece at a time
       {
         "id": number,
         "title": string,
         "explanation": string,
-        "task": string    // describe exactly which part of the brute-force to modify and how — 1-3 lines max
+        "task": string    // exactly what to WRITE (not modify) — 1-3 lines of new code, specific and concrete. The student builds the optimal solution fresh; brute-force code is shown separately as reference.
       }
     ]
   }
@@ -131,13 +145,20 @@ Return ONLY valid JSON — no markdown:
   "hint": string        // only if incorrect — a small nudge, not the answer
 }`
 
+  const fullCode = priorCode ? `${priorCode}\n${userCode}` : userCode
   const user = `Lesson: "${lesson.title}"
 Task: ${lesson.task}
-${priorCode ? `Code from prior steps (variable names already established):\n${priorCode}\n` : ''}Student's code for this step:
-${userCode}`
+Full code written so far (prior steps build up to this — the student's new addition for this step is at the end):
+${fullCode}`
 
   const text = await callClaude(system, user, 768)
-  return parseJSON(text)
+  try {
+    return parseJSON(text)
+  } catch {
+    // Claude responded but JSON was unparseable — surface the raw text rather than a generic error
+    const cleaned = text.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim()
+    return { correct: false, feedback: cleaned }
+  }
 }
 
 /**
@@ -245,11 +266,14 @@ Your hint must be specific to THIS step only — not something general or alread
 ${levelInstructions}
 Return plain text only.`
 
+  const fullCode = priorCode
+    ? `${priorCode}\n${userCode || '(nothing written for this step yet)'}`
+    : (userCode || '(nothing written yet)')
   const user = `Current step: "${lesson.title}"
 What they need to write: ${lesson.task}
 Language: ${lang}
-${priorCode ? `Code already written in prior steps:\n${priorCode}\n` : ''}Student's current attempt for this step:
-${userCode || '(nothing written yet)'}`
+Full code so far (prior steps + this step's current attempt at the end):
+${fullCode}`
 
   return callClaude(system, user, 300)
 }

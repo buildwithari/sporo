@@ -15,12 +15,13 @@ const decoTheme = EditorView.theme({
 function buildExtensions(lockedLen, commentLen) {
   const lockedEndPos = lockedLen + commentLen
 
-  // Block any transaction that touches the locked region
+  // Block any transaction that touches only the comment line (the separator)
+  // — locked code above it is intentionally editable so users can fix brace structure
   const readOnlyFilter = EditorState.transactionFilter.of((tr) => {
     if (!tr.docChanged) return tr
     let blocked = false
     tr.changes.iterChangedRanges((fromA) => {
-      if (fromA < lockedEndPos) blocked = true
+      if (fromA >= lockedLen && fromA < lockedEndPos) blocked = true
     })
     return blocked ? [] : tr
   })
@@ -81,8 +82,9 @@ export default function LessonEditor({ lockedContent, commentLine, value, onChan
   )
 
   function handleChange(val) {
-    // Only expose the editable slice to the parent
-    onChange(val.slice(lockedEndPos))
+    // Find the comment separator dynamically — locked code above it may have been edited
+    const commentIdx = comment ? val.indexOf(comment) : -1
+    onChange(commentIdx !== -1 ? val.slice(commentIdx + comment.length) : val.slice(lockedEndPos))
   }
 
   function handleCreateEditor(view) {

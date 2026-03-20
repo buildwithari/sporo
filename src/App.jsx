@@ -6,7 +6,7 @@ import MilestonePage from './components/Milestone/MilestonePage'
 import Celebration from './components/Celebration/Celebration'
 import { loadProgress, resetUnitProgress, resetMilestoneProgress, resetAllProgress, setLanguage, updateUnitProgress } from './lib/progress'
 import ForestPage from './components/Forest/ForestPage'
-import { clearAllLessonCaches } from './lib/lessonCache'
+import { clearAllLessonCaches, clearCachedLessons } from './lib/lessonCache'
 import { LANGUAGES, DEFAULT_LANGUAGE } from './lib/languages'
 import { milestones } from './data/neetcode150'
 import { getNextReviewDate } from './lib/srs'
@@ -86,6 +86,7 @@ export default function App() {
 
   function handleResetUnit(unit) {
     resetUnitProgress(unit.id)
+    clearCachedLessons(unit.id, language)
     refreshProgress()
   }
 

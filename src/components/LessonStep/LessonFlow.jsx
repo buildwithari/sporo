@@ -50,9 +50,9 @@ function ProblemStatement({ unit, lessons, phaseLabel, onBack, showBruteForceTip
         {unit.description || lessons?.description}
       </p>
 
-      {unit.testCases && unit.testCases.length > 0 && (
+      {((unit.testCases?.length > 0) || (lessons?.testCases?.length > 0)) && (
         <div className="space-y-4 mb-6">
-          {unit.testCases.map((tc, i) => (
+          {(unit.testCases || lessons.testCases).map((tc, i) => (
             <div key={i}>
               <div className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-2">
                 Example {i + 1}
@@ -78,11 +78,11 @@ function ProblemStatement({ unit, lessons, phaseLabel, onBack, showBruteForceTip
         </div>
       )}
 
-      {unit.constraints && unit.constraints.length > 0 && (
+      {((unit.constraints?.length > 0) || (lessons?.constraints?.length > 0)) && (
         <div className="mb-6">
           <div className="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-2">Constraints</div>
           <ul className="space-y-1">
-            {unit.constraints.map((c, i) => (
+            {(unit.constraints || lessons.constraints).map((c, i) => (
               <li key={i} className="text-stone-600 text-xs font-mono flex gap-2">
                 <span className="text-stone-300 shrink-0">•</span>
                 <span>{c}</span>
@@ -92,10 +92,10 @@ function ProblemStatement({ unit, lessons, phaseLabel, onBack, showBruteForceTip
         </div>
       )}
 
-      {unit.followUp && (
+      {(unit.followUp || lessons?.followUp) && (
         <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm">
           <p className="font-semibold text-blue-800 mb-1">Follow-up</p>
-          <p className="text-blue-700 text-xs leading-relaxed">{unit.followUp}</p>
+          <p className="text-blue-700 text-xs leading-relaxed">{unit.followUp || lessons.followUp}</p>
         </div>
       )}
 
@@ -150,6 +150,7 @@ export default function LessonFlow({
   // ── Brute-force lesson state ─────────────────────────────────
   const [bfLessonIdx, setBfLessonIdx] = useState(0)
   const [bfCompletedSteps, setBfCompletedSteps] = useState([]) // { title, code }[]
+  const [bfStaleSince, setBfStaleSince] = useState(null) // index of first step that needs re-check
   const [bfFeedback, setBfFeedback] = useState(null)
   const starterCode = typeof unit.starterCode === 'object'
     ? (unit.starterCode[language] || unit.starterCode.java || '')
@@ -161,6 +162,7 @@ export default function LessonFlow({
   // ── Optimal lesson state ─────────────────────────────────────
   const [optLessonIdx, setOptLessonIdx] = useState(0)
   const [optCompletedSteps, setOptCompletedSteps] = useState([]) // { title, code }[]
+  const [optStaleSince, setOptStaleSince] = useState(null) // index of first step that needs re-check
   const [optFeedback, setOptFeedback] = useState(null)
   // recall mode: seeds with starter code so user sees the function signature
   const [optFinalCode, setOptFinalCode] = useState(starterCode)
@@ -173,6 +175,10 @@ export default function LessonFlow({
 
   useEffect(() => {
     if (isRecall) {
+      const cached = getCachedLessons(unit.id, language)
+      if (cached?.brute?.lessons && cached?.optimal?.lessons) {
+        setLessons(cached)
+      }
       setPhase('opt-final')
       return
     }
@@ -248,10 +254,16 @@ export default function LessonFlow({
         updateUnitProgress(unit.id, { currentLesson: bfLessonIdx + 1 })
         onProgressUpdate()
         setBfCompletedSteps((prev) => {
-          const updated = prev.slice(0, bfLessonIdx)
+          const updated = [...prev]
           updated[bfLessonIdx] = { title: lessons.brute.lessons[bfLessonIdx].title, code }
           return updated
         })
+        // If there are subsequent already-completed steps, they need re-check
+        if (bfCompletedSteps.length > bfLessonIdx + 1) {
+          setBfStaleSince(bfLessonIdx + 1)
+        } else {
+          setBfStaleSince(null)
+        }
       } else if (result.hint) {
         setUsedHints((n) => n + 1)
       }
@@ -313,6 +325,7 @@ export default function LessonFlow({
     setBfFinalFeedback(null)
     setOptLessonIdx(0)
     setOptCompletedSteps([])
+    setOptStaleSince(null)
     setPhase('opt-intro')
   }
 
@@ -330,10 +343,16 @@ export default function LessonFlow({
         updateUnitProgress(unit.id, { optCurrentLesson: optLessonIdx + 1 })
         onProgressUpdate()
         setOptCompletedSteps((prev) => {
-          const updated = prev.slice(0, optLessonIdx)
+          const updated = [...prev]
           updated[optLessonIdx] = { title: lessons.optimal.lessons[optLessonIdx].title, code }
           return updated
         })
+        // If there are subsequent already-completed steps, they need re-check
+        if (optCompletedSteps.length > optLessonIdx + 1) {
+          setOptStaleSince(optLessonIdx + 1)
+        } else {
+          setOptStaleSince(null)
+        }
       } else if (result.hint) {
         setUsedHints((n) => n + 1)
       }
@@ -644,7 +663,7 @@ export default function LessonFlow({
           totalLessons={lessons.brute.lessons.length}
           completedSteps={bfCompletedSteps.slice(0, bfLessonIdx)}
           initialCode={bfCompletedSteps[bfLessonIdx]?.code ?? (bfLessonIdx === 0 ? starterCode : '')}
-          alreadyCompleted={bfLessonIdx < bfCompletedSteps.length}
+          alreadyCompleted={bfLessonIdx < bfCompletedSteps.length && (bfStaleSince === null || bfLessonIdx < bfStaleSince)}
           onSubmit={handleBfLessonSubmit}
           isEvaluating={phase === 'bf-evaluating'}
           feedback={bfFeedback}
@@ -684,7 +703,7 @@ export default function LessonFlow({
           totalLessons={lessons.optimal.lessons.length}
           completedSteps={optCompletedSteps.slice(0, optLessonIdx)}
           initialCode={optCompletedSteps[optLessonIdx]?.code ?? (optLessonIdx === 0 ? starterCode : '')}
-          alreadyCompleted={optLessonIdx < optCompletedSteps.length}
+          alreadyCompleted={optLessonIdx < optCompletedSteps.length && (optStaleSince === null || optLessonIdx < optStaleSince)}
           onSubmit={handleOptLessonSubmit}
           isEvaluating={phase === 'opt-evaluating'}
           feedback={optFeedback}

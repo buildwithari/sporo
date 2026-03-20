@@ -482,9 +482,124 @@ public:
           { input: 'numbers=[-1,0], target=-1', expected: '[1,2]', explanation: 'numbers[1] + numbers[2] = -1 + 0 = -1. We return [1, 2].' },
         ],
       },
-      { id: 'three-sum', name: '3Sum', difficulty: 'Medium' },
-      { id: 'container-water', name: 'Container With Most Water', difficulty: 'Medium' },
-      { id: 'trapping-rain', name: 'Trapping Rain Water', difficulty: 'Hard' },
+      {
+        id: 'three-sum',
+        name: '3Sum',
+        difficulty: 'Medium',
+        summary: "Given an array of numbers, find all unique triplets that add up to zero. The tricky part is avoiding duplicate triplets in your answer — sorting the array first makes this manageable.",
+        description:
+          'Given an integer array nums, return all the triplets [nums[i], nums[j], nums[k]] such that i != j, i != k, and j != k, and nums[i] + nums[j] + nums[k] == 0.\n\nNotice that the solution set must not contain duplicate triplets.',
+        constraints: [
+          '3 <= nums.length <= 3000',
+          '-10^5 <= nums[i] <= 10^5',
+        ],
+        starterCode: {
+          java: `class Solution {
+    public List<List<Integer>> threeSum(int[] nums) {
+        // your code here
+    }
+}`,
+          python: `class Solution:
+    def threeSum(self, nums: List[int]) -> List[List[int]]:
+        # your code here`,
+          cpp: `class Solution {
+public:
+    vector<vector<int>> threeSum(vector<int>& nums) {
+        // your code here
+    }
+};`,
+          c: `int** threeSum(int* nums, int numsSize, int* returnSize, int** returnColumnSizes) {
+    // your code here
+}`,
+          javascript: `var threeSum = function(nums) {
+    // your code here
+};`,
+        },
+        testCases: [
+          { input: 'nums=[-1,0,1,2,-1,-4]', expected: '[[-1,-1,2],[-1,0,1]]', explanation: 'nums[0] + nums[1] + nums[2] = -1 + 0 + 1 = 0. nums[1] + nums[2] + nums[4] = 0 + 1 + (-1) = 0. nums[0] + nums[3] + nums[4] = -1 + 2 + (-1) = 0.' },
+          { input: 'nums=[0,1,1]', expected: '[]', explanation: 'The only possible triplet does not sum up to 0.' },
+          { input: 'nums=[0,0,0]', expected: '[[0,0,0]]', explanation: 'The only possible triplet sums up to 0.' },
+        ],
+      },
+      {
+        id: 'container-water',
+        name: 'Container With Most Water',
+        difficulty: 'Medium',
+        summary: "You have a set of vertical lines on a graph. Find the two lines that together with the x-axis form a container that holds the most water. You want to maximize the area, which is determined by the shorter line and the distance between the two lines.",
+        description:
+          'You are given an integer array height of length n. There are n vertical lines drawn such that the two endpoints of the ith line are (i, 0) and (i, height[i]).\n\nFind two lines that together with the x-axis form a container, such that the container contains the most water.\n\nReturn the maximum amount of water a container can store.',
+        constraints: [
+          'n == height.length',
+          '2 <= n <= 10^5',
+          '0 <= height[i] <= 10^4',
+        ],
+        followUp: 'Can you solve this in O(n) time?',
+        starterCode: {
+          java: `class Solution {
+    public int maxArea(int[] height) {
+        // your code here
+    }
+}`,
+          python: `class Solution:
+    def maxArea(self, height: List[int]) -> int:
+        # your code here`,
+          cpp: `class Solution {
+public:
+    int maxArea(vector<int>& height) {
+        // your code here
+    }
+};`,
+          c: `int maxArea(int* height, int heightSize) {
+    // your code here
+}`,
+          javascript: `var maxArea = function(height) {
+    // your code here
+};`,
+        },
+        testCases: [
+          { input: 'height=[1,8,6,2,5,4,8,3,7]', expected: '49', explanation: 'The vertical lines at index 1 (height 8) and index 8 (height 7) form the container. Area = min(8,7) * (8-1) = 7 * 7 = 49.' },
+          { input: 'height=[1,1]', expected: '1' },
+        ],
+      },
+      {
+        id: 'trapping-rain',
+        name: 'Trapping Rain Water',
+        difficulty: 'Hard',
+        summary: "Given an elevation map, figure out how much rainwater gets trapped between the bars after it rains. Water at any position is bounded by the shorter of the tallest bars to its left and right.",
+        description:
+          'Given n non-negative integers representing an elevation map where the width of each bar is 1, compute how much water it can trap after raining.',
+        constraints: [
+          'n == height.length',
+          '1 <= n <= 2 * 10^4',
+          '0 <= height[i] <= 10^5',
+        ],
+        starterCode: {
+          java: `class Solution {
+    public int trap(int[] height) {
+        // your code here
+    }
+}`,
+          python: `class Solution:
+    def trap(self, height: List[int]) -> int:
+        # your code here`,
+          cpp: `class Solution {
+public:
+    int trap(vector<int>& height) {
+        // your code here
+    }
+};`,
+          c: `int trap(int* height, int heightSize) {
+    // your code here
+}`,
+          javascript: `var trap = function(height) {
+    // your code here
+};`,
+        },
+        testCases: [
+          { input: 'height=[0,1,0,2,1,0,1,3,2,1,2,1]', expected: '6', explanation: '6 units of rain water are trapped between the bars.' },
+          { input: 'height=[4,2,0,3,2,5]', expected: '9' },
+        ],
+      },
     ],
   },
   {
@@ -493,7 +608,44 @@ public:
     emoji: '🪟',
     unlocked: false,
     units: [
-      { id: 'best-time-stock', name: 'Best Time to Buy and Sell Stock', difficulty: 'Easy' },
+      {
+        id: 'best-time-stock',
+        name: 'Best Time to Buy and Sell Stock',
+        difficulty: 'Easy',
+        summary: "Given a list of stock prices by day, find the maximum profit you can make by buying on one day and selling on a later day. You can only make one transaction — pick the best day to buy and the best day to sell after it.",
+        description:
+          'You are given an array prices where prices[i] is the price of a given stock on the ith day.\n\nYou want to maximize your profit by choosing a single day to buy one stock and choosing a different day in the future to sell that stock.\n\nReturn the maximum profit you can achieve from this transaction. If you cannot achieve any profit, return 0.',
+        constraints: [
+          '1 <= prices.length <= 10^5',
+          '0 <= prices[i] <= 10^4',
+        ],
+        starterCode: {
+          java: `class Solution {
+    public int maxProfit(int[] prices) {
+        // your code here
+    }
+}`,
+          python: `class Solution:
+    def maxProfit(self, prices: List[int]) -> int:
+        # your code here`,
+          cpp: `class Solution {
+public:
+    int maxProfit(vector<int>& prices) {
+        // your code here
+    }
+};`,
+          c: `int maxProfit(int* prices, int pricesSize) {
+    // your code here
+}`,
+          javascript: `var maxProfit = function(prices) {
+    // your code here
+};`,
+        },
+        testCases: [
+          { input: 'prices=[7,1,5,3,6,4]', expected: '5', explanation: 'Buy on day 2 (price=1) and sell on day 5 (price=6), profit = 6-1 = 5.' },
+          { input: 'prices=[7,6,4,3,1]', expected: '0', explanation: 'No transaction is done since prices only decrease.' },
+        ],
+      },
       { id: 'longest-substring', name: 'Longest Substring Without Repeating Characters', difficulty: 'Medium' },
       { id: 'longest-repeating-char', name: 'Longest Repeating Character Replacement', difficulty: 'Medium' },
       { id: 'permutation-in-string', name: 'Permutation in String', difficulty: 'Medium' },
