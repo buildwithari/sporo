@@ -667,7 +667,7 @@ export default function LessonFlow({
           lessonIndex={optLessonIdx}
           totalLessons={lessons.optimal.lessons.length}
           completedSteps={optCompletedSteps.slice(0, optLessonIdx)}
-          initialCode={optCompletedSteps[optLessonIdx]?.code ?? (optLessonIdx === 0 ? bfFinalCode : '')}
+          initialCode={optCompletedSteps[optLessonIdx]?.code ?? (optLessonIdx === 0 ? starterCode : '')}
           alreadyCompleted={optLessonIdx < optCompletedSteps.length}
           onSubmit={handleOptLessonSubmit}
           isEvaluating={phase === 'opt-evaluating'}

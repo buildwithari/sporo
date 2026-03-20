@@ -4,11 +4,12 @@ import DailyPlan from './components/DailyPlan/DailyPlan'
 import LessonFlow from './components/LessonStep/LessonFlow'
 import MilestonePage from './components/Milestone/MilestonePage'
 import Celebration from './components/Celebration/Celebration'
-import { loadProgress, resetUnitProgress, resetMilestoneProgress, resetAllProgress, setLanguage } from './lib/progress'
+import { loadProgress, resetUnitProgress, resetMilestoneProgress, resetAllProgress, setLanguage, updateUnitProgress } from './lib/progress'
 import ForestPage from './components/Forest/ForestPage'
 import { clearAllLessonCaches } from './lib/lessonCache'
 import { LANGUAGES, DEFAULT_LANGUAGE } from './lib/languages'
 import { milestones } from './data/neetcode150'
+import { getNextReviewDate } from './lib/srs'
 import DailyTaskWidget from './components/DailyTask/DailyTaskWidget'
 
 function useClock() {
@@ -85,6 +86,16 @@ export default function App() {
 
   function handleResetUnit(unit) {
     resetUnitProgress(unit.id)
+    refreshProgress()
+  }
+
+  function handleScheduleReview(unit, isoDate) {
+    updateUnitProgress(unit.id, { nextReview: isoDate })
+    refreshProgress()
+  }
+
+  function handleResetSRS(unit) {
+    updateUnitProgress(unit.id, { interval: 1, reviewCount: 0, nextReview: getNextReviewDate(1) })
     refreshProgress()
   }
 
@@ -214,6 +225,8 @@ export default function App() {
             onMilestoneClick={handleMilestoneClick}
             onResetUnit={handleResetUnit}
             onResetMilestone={handleResetMilestone}
+            onScheduleReview={handleScheduleReview}
+            onResetSRS={handleResetSRS}
           />
         )}
 

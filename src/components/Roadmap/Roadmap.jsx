@@ -28,11 +28,12 @@ const DEFAULT_STYLE = { bg: 'bg-stone-400', light: 'bg-stone-50', border: 'borde
 // Horizontal offsets for the winding path (px from center)
 const WAVE = [0, 70, 110, 70, 0, -70, -110, -70]
 
-function UnitNode({ unit, unitProgress, style, onStart, onRecall, onReset, index, isLocked }) {
+function UnitNode({ unit, unitProgress, style, onStart, onRecall, onReset, onScheduleReview, index, isLocked }) {
   const status = unitProgress?.status || 'new'
   const recallDue = isDue(unitProgress?.nextReview)
   const overdue = isOverdue(unitProgress?.nextReview)
   const offset = WAVE[index % WAVE.length]
+  const canSchedule = status === 'planted' || status === 'mastered'
 
   let nodeClass = ''
   let icon = null
@@ -115,7 +116,7 @@ function UnitNode({ unit, unitProgress, style, onStart, onRecall, onReset, index
           {unit.name}
         </p>
 
-        {/* Reset — shown on hover if there's progress */}
+        {/* Reset + Schedule — shown on hover if there's progress */}
         {!isLocked && hasProgress && (
           <div className="mt-1 h-4">
             {confirming ? (
@@ -125,12 +126,25 @@ function UnitNode({ unit, unitProgress, style, onStart, onRecall, onReset, index
                 <button onClick={cancelReset} className="text-stone-400 text-xs hover:text-stone-600">No</button>
               </div>
             ) : (
-              <button
-                onClick={handleReset}
-                className="text-stone-300 hover:text-stone-500 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                ↺ reset
-              </button>
+              <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={handleReset}
+                  className="text-stone-300 hover:text-stone-500 text-xs"
+                >
+                  ↺ reset
+                </button>
+                {canSchedule && (
+                  <>
+                    <span className="text-stone-200 text-xs">·</span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onScheduleReview(unit, unitProgress) }}
+                      className="text-stone-300 hover:text-stone-500 text-xs"
+                    >
+                      🗓 review
+                    </button>
+                  </>
+                )}
+              </div>
             )}
           </div>
         )}
@@ -152,7 +166,7 @@ function Connector({ fromOffset, toOffset }) {
   )
 }
 
-function MilestoneSection({ milestone, progress, isActive, onStartUnit, onStartRecall, onMilestoneClick, onResetUnit, onResetMilestone }) {
+function MilestoneSection({ milestone, progress, isActive, onStartUnit, onStartRecall, onMilestoneClick, onResetUnit, onResetMilestone, onScheduleReview }) {
   const style = MILESTONE_STYLES[milestone.id] ?? DEFAULT_STYLE
   const units = milestone.units || []
 
@@ -282,6 +296,7 @@ function MilestoneSection({ milestone, progress, isActive, onStartUnit, onStartR
                   onStart={(u) => onStartUnit(u, milestone)}
                   onRecall={(u) => onStartRecall(u, milestone)}
                   onReset={(u) => onResetUnit(u)}
+                  onScheduleReview={onScheduleReview}
                   index={i}
                   isLocked={i > effectiveFrontier && !['planted', 'mastered', 'in_progress'].includes(progress.units?.[unit.id]?.status)}
                 />
@@ -294,7 +309,102 @@ function MilestoneSection({ milestone, progress, isActive, onStartUnit, onStartR
   )
 }
 
-export default function Roadmap({ milestones, progress, onStartUnit, onStartRecall, onMilestoneClick, onResetUnit, onResetMilestone }) {
+function ReviewSchedulerModal({ unit, unitProgress, onConfirm, onResetSRS, onClose }) {
+  const today = new Date().toISOString().split('T')[0]
+  const currentReview = unitProgress?.nextReview
+    ? new Date(unitProgress.nextReview).toISOString().split('T')[0]
+    : today
+  const [date, setDate] = useState(currentReview < today ? today : currentReview)
+  const [confirmingReset, setConfirmingReset] = useState(false)
+
+  function handleConfirm() {
+    const iso = new Date(date + 'T00:00:00').toISOString()
+    onConfirm(unit, iso)
+  }
+
+  const currentInterval = unitProgress?.interval || 1
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/30" />
+      <div
+        className="relative bg-white rounded-2xl shadow-xl p-6 w-80 animate-fade-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="font-bold text-stone-800 text-base mb-1">Schedule review</h3>
+        <p className="text-stone-500 text-sm mb-5">{unit.name}</p>
+
+        <label className="block text-xs font-medium text-stone-500 uppercase tracking-wide mb-2">
+          Review date
+        </label>
+        <input
+          type="date"
+          value={date}
+          min={today}
+          onChange={(e) => setDate(e.target.value)}
+          className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-stone-800 text-sm mb-4 focus:outline-none focus:ring-2 focus:ring-stone-300"
+        />
+
+        <div className="flex gap-2 mb-5">
+          <button
+            onClick={onClose}
+            className="flex-1 border border-stone-200 text-stone-500 hover:text-stone-700 hover:border-stone-300 font-medium py-2.5 rounded-xl text-sm transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={!date}
+            className="flex-1 bg-stone-800 hover:bg-stone-900 disabled:opacity-40 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
+          >
+            Set date
+          </button>
+        </div>
+
+        <div className="border-t border-stone-100 pt-4">
+          {confirmingReset ? (
+            <div>
+              <p className="text-stone-600 text-xs mb-3">
+                This resets the SRS interval back to 1 day. The full 1→3→7→14→30→60 cycle will run again.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmingReset(false)}
+                  className="flex-1 border border-stone-200 text-stone-500 hover:text-stone-700 font-medium py-2 rounded-xl text-xs transition-colors"
+                >
+                  Keep current
+                </button>
+                <button
+                  onClick={() => onResetSRS(unit)}
+                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 rounded-xl text-xs transition-colors"
+                >
+                  Reset SRS
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-stone-500 text-xs">Current interval</p>
+                <p className="text-stone-700 text-xs font-medium">{currentInterval} day{currentInterval !== 1 ? 's' : ''}</p>
+              </div>
+              <button
+                onClick={() => setConfirmingReset(true)}
+                className="text-xs text-amber-600 hover:text-amber-800 font-medium border border-amber-200 hover:border-amber-400 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                ↺ Reset SRS
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function Roadmap({ milestones, progress, onStartUnit, onStartRecall, onMilestoneClick, onResetUnit, onResetMilestone, onScheduleReview, onResetSRS }) {
+  const [schedulingUnit, setSchedulingUnit] = useState(null) // { unit, unitProgress }
+
   const totalPlanted = Object.values(progress.units || {}).filter(
     (u) => u.status === 'planted' || u.status === 'mastered'
   ).length
@@ -313,6 +423,15 @@ export default function Roadmap({ milestones, progress, onStartUnit, onStartReca
     }).length
     return units.length === 0 || completedCount < units.length
   })?.id
+
+  function handleScheduleReview(unit, unitProgress) {
+    setSchedulingUnit({ unit, unitProgress })
+  }
+
+  function handleConfirmSchedule(unit, isoDate) {
+    onScheduleReview(unit, isoDate)
+    setSchedulingUnit(null)
+  }
 
   return (
     <div className="animate-fade-in">
@@ -344,8 +463,20 @@ export default function Roadmap({ milestones, progress, onStartUnit, onStartReca
           onMilestoneClick={onMilestoneClick}
           onResetUnit={onResetUnit}
           onResetMilestone={onResetMilestone}
+          onScheduleReview={handleScheduleReview}
         />
       ))}
+
+      {/* Review scheduler modal */}
+      {schedulingUnit && (
+        <ReviewSchedulerModal
+          unit={schedulingUnit.unit}
+          unitProgress={schedulingUnit.unitProgress}
+          onConfirm={handleConfirmSchedule}
+          onResetSRS={(unit) => { onResetSRS(unit); setSchedulingUnit(null) }}
+          onClose={() => setSchedulingUnit(null)}
+        />
+      )}
     </div>
   )
 }
