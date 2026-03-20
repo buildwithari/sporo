@@ -45,7 +45,7 @@ export default function LessonStep({
   // Auto-advance 1.5s after a correct answer
   useEffect(() => {
     if (!feedback?.correct) return
-    const timer = setTimeout(() => onNext(), 1500)
+    const timer = setTimeout(() => onNext(code), 1500)
     return () => clearTimeout(timer)
   }, [feedback?.correct])
 
@@ -63,6 +63,7 @@ export default function LessonStep({
   }
 
   const isEmpty = !code.trim()
+  const isModified = alreadyCompleted && code !== (initialCode || '') && !feedback?.correct
 
   return (
     // Extra bottom padding so the fixed success/error bar doesn't cover content
@@ -134,9 +135,9 @@ export default function LessonStep({
           ← Prev
         </button>
 
-        {(feedback?.correct || alreadyCompleted) ? (
+        {(feedback?.correct || (alreadyCompleted && !isModified)) ? (
           <button
-            onClick={onNext}
+            onClick={() => onNext(code)}
             className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
           >
             {lessonIndex + 1 === totalLessons ? 'Finish ✓' : 'Next →'}

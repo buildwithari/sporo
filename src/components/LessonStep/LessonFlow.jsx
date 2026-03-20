@@ -238,16 +238,17 @@ export default function LessonFlow({
 
   async function handleBfLessonSubmit(code) {
     setPhase('bf-evaluating')
+    const isResubmission = bfLessonIdx < bfCompletedSteps.length
     try {
       const priorCode = bfCompletedSteps.slice(0, bfLessonIdx).map((s) => s.code).join('\n')
       const result = await evaluateCode(lessons.brute.lessons[bfLessonIdx], code, language, priorCode)
       setBfFeedback(result)
       if (result.correct) {
-        addXP(XP_VALUES.LESSON)
+        if (!isResubmission) addXP(XP_VALUES.LESSON)
         updateUnitProgress(unit.id, { currentLesson: bfLessonIdx + 1 })
         onProgressUpdate()
         setBfCompletedSteps((prev) => {
-          const updated = [...prev]
+          const updated = prev.slice(0, bfLessonIdx)
           updated[bfLessonIdx] = { title: lessons.brute.lessons[bfLessonIdx].title, code }
           return updated
         })
@@ -260,8 +261,15 @@ export default function LessonFlow({
     setPhase('bf-lesson')
   }
 
-  function handleBfNextLesson() {
+  function handleBfNextLesson(code) {
     setBfFeedback(null)
+    if (code !== undefined && bfCompletedSteps[bfLessonIdx]) {
+      setBfCompletedSteps((prev) => {
+        const updated = [...prev]
+        updated[bfLessonIdx] = { ...updated[bfLessonIdx], code }
+        return updated
+      })
+    }
     const next = bfLessonIdx + 1
     if (next >= lessons.brute.lessons.length) {
       setPhase('bf-final')
@@ -312,16 +320,17 @@ export default function LessonFlow({
 
   async function handleOptLessonSubmit(code) {
     setPhase('opt-evaluating')
+    const isResubmission = optLessonIdx < optCompletedSteps.length
     try {
       const priorCode = optCompletedSteps.slice(0, optLessonIdx).map((s) => s.code).join('\n')
       const result = await evaluateCode(lessons.optimal.lessons[optLessonIdx], code, language, priorCode)
       setOptFeedback(result)
       if (result.correct) {
-        addXP(XP_VALUES.LESSON)
+        if (!isResubmission) addXP(XP_VALUES.LESSON)
         updateUnitProgress(unit.id, { optCurrentLesson: optLessonIdx + 1 })
         onProgressUpdate()
         setOptCompletedSteps((prev) => {
-          const updated = [...prev]
+          const updated = prev.slice(0, optLessonIdx)
           updated[optLessonIdx] = { title: lessons.optimal.lessons[optLessonIdx].title, code }
           return updated
         })
@@ -334,8 +343,15 @@ export default function LessonFlow({
     setPhase('opt-lesson')
   }
 
-  function handleOptNextLesson() {
+  function handleOptNextLesson(code) {
     setOptFeedback(null)
+    if (code !== undefined && optCompletedSteps[optLessonIdx]) {
+      setOptCompletedSteps((prev) => {
+        const updated = [...prev]
+        updated[optLessonIdx] = { ...updated[optLessonIdx], code }
+        return updated
+      })
+    }
     const next = optLessonIdx + 1
     if (next >= lessons.optimal.lessons.length) {
       setOptFinalCode(starterCode)
