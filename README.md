@@ -29,22 +29,35 @@ Each problem is split into two parts:
 1. Open a unit — Claude generates 3-4 micro-lessons for the brute-force approach (cached after first load)
 2. An intro card explains the strategy in plain English before any coding
 3. Each lesson: one concept, one tiny coding task, instant AI feedback
-4. Function signature shown as a read-only reference — you only write the logic
+4. The method signature is pre-filled in the editor on the first step — you only write the logic
 5. Each correct step → XP + auto-advance animation
-6. Final step: full-screen editor to put the brute force together
-7. Pass → the seed is **planted** 🌱, advance to Part 2
+6. Final step: full-screen split editor (problem statement on the left, full-height code editor on the right)
+7. Pass → advance to Part 2
 
 **Part 2 — Optimize 🚀**
 1. Another 3-4 micro-lessons, each teaching one small change that improves the solution
 2. Your accepted brute-force is shown as a collapsible reference panel while you write fresh optimal code
-3. Final step: full-screen editor for the complete optimal solution
+3. Final step: full-screen split editor for the complete optimal solution
 4. Pass → XP awarded, problem fully **planted** 🌱
+
+### The full-screen editor (put it all together)
+Both Part 1 and Part 2 end with a full-screen split editor:
+- **Left panel**: full LeetCode-style problem statement — description, examples with explanations, constraints, follow-up note, and a phase tag (Brute Force / Optimal / Recall)
+- **Right panel**: full-height code editor that scrolls internally when code grows; submit button always visible at the bottom
+- A back arrow (←) beside the problem title returns to the last lesson step
+- The Sporo navbar stays visible throughout for easy navigation
 
 ### Spaced Repetition (watering schedule)
 Once a problem is solved, it gets scheduled for review. When recall day comes:
 - **Solve it cold** → passes → interval grows (1 → 3 → 7 → 14 → 30 → 60 days) 🌿
-- **Get stuck** → hit "I'm stuck" → drops back into the optimization lessons → re-learn the piece you forgot 🪴
+- **Get stuck** → hit "I'm stuck — walk me through it" → drops back into the optimization lessons → re-learn the piece you forgot 🪴
 - **Overdue recalls** appear in red on the roadmap and get prioritized in your daily plan
+
+### Manual review scheduling
+Hover over any planted or mastered problem on the roadmap to reveal a **🗓 review** button:
+- **Set a custom date**: overrides the next review date as a one-off — the SRS interval is unchanged, so the algorithm resumes normally after that recall
+- **Reset SRS**: resets the interval back to 1 day so the full 1→3→7→14→30→60 cycle runs again — useful when returning to a problem after a long break
+- The modal shows the current SRS interval so you always know where you are
 
 ### Concept Pages
 Click any milestone banner to open its concept guide — a pre-written article explaining the topic from first principles. An AI assistant sidebar is always available to answer follow-up questions.
@@ -67,17 +80,23 @@ Tell the app how much time you have (15 / 30 / 45 / 60 min). It builds a fuller 
 
 Open the app. Follow the list. Close it. Done.
 
+### Roadmap
+Milestones auto-expand and collapse as you progress:
+- The **active milestone** (the one you're currently working through) is always open
+- **Completed milestones** collapse automatically to reduce clutter — unless they have recalls due, in which case they stay open
+- Milestones unlock automatically when the previous one is fully planted
+
 ### Forest & Shop
-Spend your XP on plants — 19 plants across 4 rarities (Common → Legendary). Every plant you buy lives in your personal forest.
+Spend your XP on plants — 60+ plants across 4 rarities (Common → Legendary). Every plant you buy lives in your personal forest, which resets weekly so it stays fresh.
 
 ---
 
-## 🗺️ Roadmap
+## 🗺️ Curriculum
 
 Following the **Neetcode 150** curriculum, structured as a garden path:
 
-- 🗂️ **Arrays & Hashing** ← start here (fully implemented)
-- 👆 **Two Pointers**
+- 🗂️ **Arrays & Hashing** — fully implemented (9 problems)
+- 👆 **Two Pointers** — partially implemented (2 of 5 problems)
 - 🪟 **Sliding Window**
 - 📚 **Stack**
 - 🔍 **Binary Search**
@@ -85,7 +104,7 @@ Following the **Neetcode 150** curriculum, structured as a garden path:
 - 🌳 **Trees**
 - 📊 **Graphs**
 - 📐 **Dynamic Programming**
-- ...and 9 more milestones
+- ...and 11 more milestones
 
 ---
 
@@ -140,7 +159,7 @@ XP persists in localStorage. Spend it in the Forest shop on plants ranging from 
 sporo/
 ├── src/
 │   ├── components/
-│   │   ├── Roadmap/          # Duolingo-style winding path home screen
+│   │   ├── Roadmap/          # Winding path home screen + review scheduler modal
 │   │   ├── LessonStep/       # Two-part lesson flow + individual step cards
 │   │   ├── Milestone/        # Concept article page + AI chat sidebar
 │   │   ├── DailyPlan/        # Time-budgeted study plan
@@ -148,7 +167,7 @@ sporo/
 │   │   ├── Forest/           # Plant shop + forest display
 │   │   └── Celebration/      # XP overlay on lesson complete
 │   ├── data/
-│   │   ├── neetcode150.js    # All 18 milestones + problem definitions
+│   │   ├── neetcode150.js    # 20 milestones + problem definitions (with constraints, examples)
 │   │   ├── milestoneGuides.js # Pre-written concept articles
 │   │   └── plants.js         # Plant catalog for the forest shop
 │   ├── lib/
