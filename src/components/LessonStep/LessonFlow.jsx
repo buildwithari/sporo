@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import LessonStep from './LessonStep'
 import CodeEditor from '../CodeEditor/CodeEditor'
+import { buildStepCode } from '../CodeEditor/LessonEditor'
 import {
   generateLessons,
   evaluateCode,
@@ -246,8 +247,7 @@ export default function LessonFlow({
     setPhase('bf-evaluating')
     const isResubmission = bfLessonIdx < bfCompletedSteps.length
     try {
-      const priorCode = bfCompletedSteps.slice(0, bfLessonIdx).map((s) => s.code).join('\n')
-      const result = await evaluateCode(lessons.brute.lessons[bfLessonIdx], code, language, priorCode)
+      const result = await evaluateCode(lessons.brute.lessons[bfLessonIdx], code, language)
       setBfFeedback(result)
       if (result.correct) {
         if (!isResubmission) addXP(XP_VALUES.LESSON)
@@ -335,8 +335,7 @@ export default function LessonFlow({
     setPhase('opt-evaluating')
     const isResubmission = optLessonIdx < optCompletedSteps.length
     try {
-      const priorCode = optCompletedSteps.slice(0, optLessonIdx).map((s) => s.code).join('\n')
-      const result = await evaluateCode(lessons.optimal.lessons[optLessonIdx], code, language, priorCode)
+      const result = await evaluateCode(lessons.optimal.lessons[optLessonIdx], code, language)
       setOptFeedback(result)
       if (result.correct) {
         if (!isResubmission) addXP(XP_VALUES.LESSON)
@@ -661,15 +660,20 @@ export default function LessonFlow({
           lesson={lessons.brute.lessons[bfLessonIdx]}
           lessonIndex={bfLessonIdx}
           totalLessons={lessons.brute.lessons.length}
-          completedSteps={bfCompletedSteps.slice(0, bfLessonIdx)}
-          initialCode={bfCompletedSteps[bfLessonIdx]?.code ?? (bfLessonIdx === 0 ? starterCode : '')}
+          initialCode={
+            bfCompletedSteps[bfLessonIdx]?.code ??
+            buildStepCode(
+              bfLessonIdx === 0 ? starterCode : (bfCompletedSteps[bfLessonIdx - 1]?.code ?? starterCode),
+              lessons.brute.lessons[bfLessonIdx].title,
+              language
+            )
+          }
           alreadyCompleted={bfLessonIdx < bfCompletedSteps.length && (bfStaleSince === null || bfLessonIdx < bfStaleSince)}
           onSubmit={handleBfLessonSubmit}
           isEvaluating={phase === 'bf-evaluating'}
           feedback={bfFeedback}
           onNext={handleBfNextLesson}
           onPrev={handleBfStepBack}
-          contextCode={bfLessonIdx === 0 ? undefined : starterCode}
           language={language}
         />
       )}
@@ -701,8 +705,14 @@ export default function LessonFlow({
           lesson={lessons.optimal.lessons[optLessonIdx]}
           lessonIndex={optLessonIdx}
           totalLessons={lessons.optimal.lessons.length}
-          completedSteps={optCompletedSteps.slice(0, optLessonIdx)}
-          initialCode={optCompletedSteps[optLessonIdx]?.code ?? (optLessonIdx === 0 ? starterCode : '')}
+          initialCode={
+            optCompletedSteps[optLessonIdx]?.code ??
+            buildStepCode(
+              optLessonIdx === 0 ? starterCode : (optCompletedSteps[optLessonIdx - 1]?.code ?? starterCode),
+              lessons.optimal.lessons[optLessonIdx].title,
+              language
+            )
+          }
           alreadyCompleted={optLessonIdx < optCompletedSteps.length && (optStaleSince === null || optLessonIdx < optStaleSince)}
           onSubmit={handleOptLessonSubmit}
           isEvaluating={phase === 'opt-evaluating'}
@@ -710,7 +720,6 @@ export default function LessonFlow({
           onNext={handleOptNextLesson}
           onPrev={handleOptStepBack}
           referenceCode={bfFinalCode}
-          contextCode={optLessonIdx === 0 ? undefined : starterCode}
           language={language}
         />
       )}

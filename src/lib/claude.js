@@ -130,10 +130,10 @@ ${starterCode}`
 }
 
 /**
- * Evaluate a student's code for a single brute-force micro-lesson (code fragment).
+ * Evaluate a student's code for a single micro-lesson step.
  * Returns { correct: boolean, feedback: string, hint?: string }
  */
-export async function evaluateCode(lesson, userCode, language = 'java', priorCode = '') {
+export async function evaluateCode(lesson, userCode, language = 'java') {
   const lang = langLabel(language)
   const system = `You are an encouraging ${lang} coding tutor. Evaluate if the student's code correctly implements what the lesson asks.
 Be brief and kind. Focus on whether the concept is right, not style.
@@ -145,11 +145,10 @@ Return ONLY valid JSON — no markdown:
   "hint": string        // only if incorrect — a small nudge, not the answer
 }`
 
-  const fullCode = priorCode ? `${priorCode}\n${userCode}` : userCode
   const user = `Lesson: "${lesson.title}"
 Task: ${lesson.task}
-Full code written so far (prior steps build up to this — the student's new addition for this step is at the end):
-${fullCode}`
+Student's code:
+${userCode}`
 
   const text = await callClaude(system, user, 768)
   try {
@@ -252,7 +251,7 @@ Keep responses to 3-5 sentences unless a longer explanation is truly necessary.`
  * Get a progressive hint for a stuck student.
  * hintLevel: 1 = gentle nudge, 2 = more detail, 3 = exact code
  */
-export async function getHint(lesson, userCode, language = 'java', priorCode = '', hintLevel = 1) {
+export async function getHint(lesson, userCode, language = 'java', hintLevel = 1) {
   const lang = langLabel(language)
 
   const levelInstructions = hintLevel === 1
@@ -266,14 +265,11 @@ Your hint must be specific to THIS step only — not something general or alread
 ${levelInstructions}
 Return plain text only.`
 
-  const fullCode = priorCode
-    ? `${priorCode}\n${userCode || '(nothing written for this step yet)'}`
-    : (userCode || '(nothing written yet)')
   const user = `Current step: "${lesson.title}"
 What they need to write: ${lesson.task}
 Language: ${lang}
-Full code so far (prior steps + this step's current attempt at the end):
-${fullCode}`
+Student's code:
+${userCode || '(nothing written yet)'}`
 
   return callClaude(system, user, 300)
 }

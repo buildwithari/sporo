@@ -1,108 +1,90 @@
-import { useMemo } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { vscodeDark } from '@uiw/codemirror-theme-vscode'
 import { getLangExtension, getCommentPrefix } from '../../lib/languages'
-import { EditorState, StateField } from '@codemirror/state'
-import { EditorView, Decoration } from '@codemirror/view'
 
-// Static decoration theme — applied once, never recreated
-const decoTheme = EditorView.theme({
-  '.cm-locked-code': { opacity: '0.4' },
-  '.cm-step-comment': { color: '#86efac !important' },
-  '.cm-step-comment span': { color: '#86efac !important' },
-})
+/**
+ * Builds the initial code for a lesson step by inserting the step's comment
+ * just before the innermost function's closing brace.
+ *
+ * Uses brace-depth tracking: finds the first time depth drops from its
+ * maximum value, which is always the innermost function's closing brace.
+ * For languages without braces (Python), falls back to appending.
+ */
+export function buildStepCode(baseCode, stepTitle, language) {
+  const commentChar = getCommentPrefix(language)
+  const comment = `${commentChar} ${stepTitle}`
 
-function buildExtensions(lockedLen, commentLen) {
-  const lockedEndPos = lockedLen + commentLen
+  if (!baseCode || !baseCode.trim()) return comment + '\n'
 
-  // Block any transaction that touches only the comment line (the separator)
-  // — locked code above it is intentionally editable so users can fix brace structure
-  const readOnlyFilter = EditorState.transactionFilter.of((tr) => {
-    if (!tr.docChanged) return tr
-    let blocked = false
-    tr.changes.iterChangedRanges((fromA) => {
-      if (fromA >= lockedLen && fromA < lockedEndPos) blocked = true
-    })
-    return blocked ? [] : tr
-  })
+  const lines = baseCode.split('\n')
 
-  // Mark decorations for the locked code and the green comment
-  const decoField = StateField.define({
-    create(state) {
-      const len = state.doc.length
-      const marks = []
-      if (lockedLen > 0 && lockedLen <= len) {
-        marks.push(Decoration.mark({ class: 'cm-locked-code' }).range(0, lockedLen))
+  // First pass: find the maximum brace depth in the code
+  let depth = 0
+  let maxDepth = 0
+  for (const line of lines) {
+    for (const ch of line) {
+      if (ch === '{') depth++
+      if (ch === '}') depth--
+    }
+    if (depth > maxDepth) maxDepth = depth
+  }
+
+  // No braces (e.g. Python) — just append the comment
+  if (maxDepth === 0) return baseCode + '\n' + comment + '\n'
+
+  // Second pass: find the first character where depth drops from maxDepth to maxDepth-1.
+  // That's the closing brace of the innermost function. Insert the comment before that line.
+  depth = 0
+  for (let i = 0; i < lines.length; i++) {
+    for (const ch of lines[i]) {
+      if (ch === '{') depth++
+      if (ch === '}') {
+        depth--
+        if (depth === maxDepth - 1) {
+          // Indent the comment to match the closing brace line + one level
+          const closingIndent = (lines[i].match(/^(\s*)/) || ['', ''])[1]
+          const commentLine = closingIndent + '    ' + comment
+          return [...lines.slice(0, i), commentLine, ...lines.slice(i)].join('\n')
+        }
       }
-      if (commentLen > 0 && lockedLen < len) {
-        marks.push(
-          Decoration.mark({ class: 'cm-step-comment' }).range(
-            lockedLen,
-            Math.min(lockedEndPos, len)
-          )
-        )
-      }
-      return marks.length ? Decoration.set(marks) : Decoration.none
-    },
-    // Locked content never changes within a step — decorations are stable
-    update(decos) {
-      return decos
-    },
-    provide: (f) => EditorView.decorations.from(f),
-  })
+    }
+  }
 
-  return [readOnlyFilter, decoField]
+  return baseCode + '\n' + comment + '\n'
 }
 
 /**
- * A CodeMirror editor that shows previous steps' code grayed out and
- * non-editable, followed by a green comment, then the active editable region.
- *
- * Props:
- *   lockedContent  — string of all previous steps' code (may be empty)
- *   commentLine    — a single comment string, e.g. "// Declare the HashMap"
- *   value          — the user's current (editable) code
- *   onChange       — called with only the editable portion
+ * A simple fully-editable CodeMirror editor for micro-lesson steps.
+ * The step comment is embedded in `value` (built by buildStepCode in LessonFlow).
+ * On mount the cursor is placed right after the comment so the user can type immediately.
  */
-export default function LessonEditor({ lockedContent, commentLine, value, onChange, language = 'java' }) {
+export default function LessonEditor({ value, onChange, commentLine, language = 'java' }) {
   const commentChar = getCommentPrefix(language)
-  const prefix = lockedContent ? lockedContent + '\n' : ''
-  const comment = commentLine ? `${commentChar} ${commentLine}\n` : ''
-  const lockedLen = prefix.length
-  const commentLen = comment.length
-  const lockedEndPos = lockedLen + commentLen
-
-  const fullValue = prefix + comment + value
-
-  // Rebuild extensions only when the locked region changes (i.e. new step)
-  const extensions = useMemo(
-    () => buildExtensions(lockedLen, commentLen),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [lockedEndPos]
-  )
-
-  function handleChange(val) {
-    // Find the comment separator dynamically — locked code above it may have been edited
-    const commentIdx = comment ? val.indexOf(comment) : -1
-    onChange(commentIdx !== -1 ? val.slice(commentIdx + comment.length) : val.slice(lockedEndPos))
-  }
 
   function handleCreateEditor(view) {
-    // Place cursor at the end of the document on mount
-    const end = view.state.doc.length
-    view.dispatch({ selection: { anchor: end } })
+    if (commentLine) {
+      const text = view.state.doc.toString()
+      const needle = `${commentChar} ${commentLine}`
+      const idx = text.indexOf(needle)
+      if (idx !== -1) {
+        const lineEnd = text.indexOf('\n', idx + needle.length)
+        const pos = lineEnd !== -1 ? lineEnd + 1 : idx + needle.length
+        view.dispatch({ selection: { anchor: pos } })
+        return
+      }
+    }
+    view.dispatch({ selection: { anchor: view.state.doc.length } })
   }
 
   return (
     <div className="rounded-lg overflow-hidden border border-stone-700 text-sm">
       <CodeMirror
-        key={lockedEndPos}
-        value={fullValue}
+        value={value}
         height="auto"
         minHeight="140px"
         theme={vscodeDark}
-        extensions={[getLangExtension(language), ...extensions, decoTheme]}
-        onChange={handleChange}
+        extensions={[getLangExtension(language)]}
+        onChange={onChange}
         onCreateEditor={handleCreateEditor}
         basicSetup={{
           lineNumbers: true,

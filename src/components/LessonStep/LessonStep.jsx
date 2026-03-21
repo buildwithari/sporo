@@ -26,7 +26,6 @@ export default function LessonStep({
   lesson,
   lessonIndex,
   totalLessons,
-  completedSteps,
   initialCode,
   alreadyCompleted,
   onSubmit,
@@ -34,7 +33,6 @@ export default function LessonStep({
   feedback,
   onNext,
   onPrev,
-  contextCode,    // optional: function signature shown as read-only reference above the editor
   referenceCode,  // optional: brute force solution shown as a collapsible reference panel
   language,       // language ID for editor syntax + comment prefix
 }) {
@@ -52,9 +50,8 @@ export default function LessonStep({
   const handleGetHint = async () => {
     setLoadingHint(true)
     try {
-      const priorCode = completedSteps.map((s) => s.code).join('\n')
       const hintLevel = hints.length + 1
-      const h = await getHint(lesson, code, language, priorCode, hintLevel)
+      const h = await getHint(lesson, code, language, hintLevel)
       setHints((prev) => [...prev, { level: hintLevel, text: h }])
     } catch {
       setHints((prev) => [...prev, { level: prev.length + 1, text: 'Look at the step description again — what specific value or structure does it ask you to write?' }])
@@ -77,23 +74,12 @@ export default function LessonStep({
       {/* Brute force reference — collapsible, for the optimization phase */}
       {referenceCode && <ReferencePanel code={referenceCode} />}
 
-      {/* Function signature reference — always visible, never part of the stacked code */}
-      {contextCode && (
-        <div className="mb-3">
-          <div className="text-xs text-stone-400 font-medium mb-1.5">Function signature</div>
-          <pre className="bg-stone-900 text-stone-400 text-xs font-mono px-4 py-3 rounded-lg overflow-x-auto leading-5 border border-stone-700">
-            {contextCode}
-          </pre>
-        </div>
-      )}
-
-      {/* Editor — previous steps shown grayed out, comment in green, active region below */}
+      {/* Editor */}
       <div className="mb-4">
         <LessonEditor
-          lockedContent={completedSteps.map((s) => s.code).join('\n')}
-          commentLine={lesson.title}
           value={code}
           onChange={setCode}
+          commentLine={lesson.title}
           language={language}
         />
       </div>
