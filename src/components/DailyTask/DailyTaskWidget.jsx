@@ -13,7 +13,7 @@ function buildReviseTasks(milestones, progress) {
           type: 'recall',
           unit,
           milestone: ms,
-          priority: isOverdue(up.nextReview) ? 'overdue' : 'due',
+          overdue: isOverdue(up.nextReview),
           nextReview: up.nextReview,
         })
       }
@@ -36,7 +36,6 @@ function buildNewTasks(milestones, progress) {
           type: status === 'in_progress' ? 'continue' : 'new',
           unit,
           milestone: ms,
-          priority: 'normal',
         })
       }
     }
@@ -57,42 +56,27 @@ function isTaskCompleted(task, progress) {
 
 function TaskRow({ task, completed, onStart }) {
   const icon =
-    task.priority === 'overdue' ? '⚠️'
-    : task.type === 'recall' ? '🔁'
+    task.type === 'recall' ? '💧'
     : task.type === 'continue' ? '🌱'
-    : '✨'
-
-  const tag =
-    task.priority === 'overdue'
-      ? { label: 'overdue', cls: 'bg-red-50 text-red-500 border border-red-100' }
-      : task.type === 'recall'
-      ? { label: 'due today', cls: 'bg-amber-50 text-amber-600 border border-amber-100' }
-      : task.type === 'continue'
-      ? { label: 'continue', cls: 'bg-emerald-50 text-emerald-600 border border-emerald-100' }
-      : { label: 'new', cls: 'bg-stone-100 text-stone-500 border border-stone-200' }
+    : '🌿'
 
   return (
-    <div className={`flex items-center gap-3 py-3 transition-opacity ${completed ? 'opacity-35' : ''}`}>
-      <span className="text-lg shrink-0 w-7 text-center leading-none">
+    <div className={`flex items-center gap-3 py-2.5 transition-opacity ${completed ? 'opacity-40' : ''}`}>
+      <span className="text-base shrink-0 w-6 text-center leading-none">
         {completed ? '✓' : icon}
       </span>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium text-stone-800 leading-snug truncate ${completed ? 'line-through decoration-stone-400' : ''}`}>
+        <p className={`text-sm font-medium text-stone-700 leading-snug truncate ${completed ? 'line-through decoration-stone-400' : ''}`}>
           {task.unit.name}
         </p>
-        <div className="flex items-center gap-1.5 mt-1">
-          <span className={`inline-block text-[11px] px-2 py-0.5 rounded-full font-medium ${tag.cls}`}>
-            {tag.label}
-          </span>
-          <span className="text-[11px] text-stone-300 truncate">{task.milestone.name}</span>
-        </div>
+        <p className="text-xs text-stone-400 truncate">{task.milestone.name}</p>
       </div>
       {!completed && (
         <button
           onClick={() => onStart(task)}
-          className="shrink-0 text-xs font-bold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded-lg transition-colors"
+          className="shrink-0 text-xs font-semibold text-emerald-600 hover:text-emerald-800 transition-colors"
         >
-          Go →
+          Start →
         </button>
       )}
     </div>
@@ -134,30 +118,30 @@ export default function DailyTaskWidget({ milestones, progress, onStartUnit, onS
   const tabItems = tab === 'revise' ? reviseTasks : newTasks
 
   return (
-    <div className="fixed top-20 right-4 z-30 w-80">
-      <div className="bg-white rounded-2xl shadow-lg border border-stone-200 overflow-hidden">
+    <div className="fixed top-20 right-4 z-30 w-72">
+      <div className="bg-white rounded-2xl shadow-md border border-stone-200 overflow-hidden">
 
-        {/* Header */}
+        {/* Header — matches milestone banner style */}
         <button
           onClick={() => setOpen(o => !o)}
-          className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-stone-50 transition-colors"
+          className="w-full bg-emerald-500 flex items-center justify-between px-4 py-3 hover:bg-emerald-600 transition-colors"
         >
-          <div className="flex items-center gap-2.5">
-            <span className="text-base">📋</span>
-            <span className="text-sm font-bold text-stone-700 tracking-tight">Today's tasks</span>
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🌿</span>
+            <span className="text-sm font-bold text-white">Today's garden</span>
             {totalRemaining > 0 && (
-              <span className="text-[11px] font-bold bg-emerald-500 text-white rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center leading-none">
+              <span className="text-[11px] font-bold bg-white/25 text-white rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
                 {totalRemaining}
               </span>
             )}
           </div>
-          <span className="text-stone-300 text-xs">{open ? '▲' : '▼'}</span>
+          <span className="text-white/60 text-xs">{open ? '▲' : '▼'}</span>
         </button>
 
         {open && (
           <>
             {/* Tabs */}
-            <div className="flex px-5 border-b border-stone-100 gap-1">
+            <div className="flex px-4 border-b border-stone-100">
               {[
                 { key: 'revise', label: 'Revise', count: reviseRemaining },
                 { key: 'new', label: 'New', count: newRemaining },
@@ -165,14 +149,14 @@ export default function DailyTaskWidget({ milestones, progress, onStartUnit, onS
                 <button
                   key={key}
                   onClick={() => setTab(key)}
-                  className={`flex items-center gap-1.5 text-sm font-medium py-2.5 mr-3 border-b-2 -mb-px transition-colors ${
+                  className={`flex items-center gap-1.5 text-xs font-semibold py-2 mr-4 border-b-2 -mb-px transition-colors ${
                     tab === key
                       ? 'border-emerald-500 text-emerald-600'
                       : 'border-transparent text-stone-400 hover:text-stone-600'
                   }`}
                 >
                   {label}
-                  <span className={`text-[11px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center ${
+                  <span className={`text-[10px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center ${
                     tab === key ? 'bg-emerald-100 text-emerald-600' : 'bg-stone-100 text-stone-400'
                   }`}>
                     {count}
@@ -183,25 +167,25 @@ export default function DailyTaskWidget({ milestones, progress, onStartUnit, onS
 
             {/* Content */}
             {tab === 'revise' && reviseDone ? (
-              <div className="px-5 py-5 text-center">
-                <p className="text-sm font-semibold text-emerald-600 mb-1.5">All revising done! 🎉</p>
+              <div className="px-4 py-4 text-center">
+                <p className="text-sm font-semibold text-stone-700 mb-1">All watered! 🎉</p>
                 <p className="text-xs text-stone-400 leading-relaxed">
-                  If you're up for it, get ahead on the{' '}
-                  <span className="text-orange-500 font-semibold">orange</span>
+                  Get ahead on the{' '}
+                  <span className="text-orange-500 font-medium">orange</span>
                   {' '}/{' '}
-                  <span className="text-red-500 font-semibold">red</span>
-                  {' '}problems on the roadmap.
+                  <span className="text-red-500 font-medium">red</span>
+                  {' '}problems on the roadmap if you'd like.
                 </p>
               </div>
             ) : tab === 'new' && newDone ? (
-              <div className="px-5 py-5 text-center">
-                <p className="text-sm font-semibold text-emerald-600 mb-1.5">All new problems done! 🎉</p>
+              <div className="px-4 py-4 text-center">
+                <p className="text-sm font-semibold text-stone-700 mb-1">All planted! 🌱</p>
                 <p className="text-xs text-stone-400 leading-relaxed">
-                  If you're up for it, get ahead on some more new problems on the roadmap.
+                  Explore the roadmap to get ahead on more problems.
                 </p>
               </div>
             ) : (
-              <div className="px-5 divide-y divide-stone-50">
+              <div className="px-4 divide-y divide-stone-50">
                 {tabItems.map(task => (
                   <TaskRow
                     key={task.id}
